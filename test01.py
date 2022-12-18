@@ -20,15 +20,20 @@ RANDOM_SEED = 42
 OUTPUT_FILE = "output.txt"
 NUM_THREADS = 4
 
-C_EXE = "hello_world.c"
+C_FILE = "dla_single_thread.c"
 
-os.environ['SYSTEMD_COLORS'] = '1'
+def print_out(out : subprocess.CompletedProcess):
+    text = out.stderr.decode('utf-8','replace')
+    text = text.replace("warning","\033[1;35;40mwarning\033[0m ")
+    text = text.replace("error","\033[1;31;40merror\033[0m ")
+    print(text)
+    return
 
 '''
 È possibile passare i seguenti parametri:
 >*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne. 
 >  num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
->   c_exe: eseguibile C da usare per il calcolo parallelo. Se non specificato viene usato `DA DEFINIRE`.
+>   c_file: eseguibile C da usare per il calcolo parallelo. Se non specificato viene usato `DA DEFINIRE`.
 >   output_filename: file di output. Se non specificato viene usato `output.txt`.
 
 I paramatri evidenziati con * sono obbligatori.
@@ -40,7 +45,7 @@ for arg in sys.argv:
     
     num_threads = int(sys.argv[2]) if len(sys.argv) > 2 else NUM_THREADS
     
-    c_exe = sys.argv[3] if len(sys.argv) > 3 else C_EXE
+    c_file = sys.argv[3] if len(sys.argv) > 3 else C_FILE
     output_file = sys.argv[4] if len(sys.argv) > 4 else OUTPUT_FILE
     
     
@@ -66,11 +71,12 @@ def execute_c_program():
     DA IMPLEMENTARE:    teoricamente può anche aspettare termini e prendersi il return. 
                         per ora l'idea è che il programma C scriva su file.
     '''
-    compiling = subprocess.run(["gcc",'-g','-Wall', c_exe], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(compiling.stdout.decode('utf-8','replace'))
-    print(compiling.stderr.decode('utf-8','replace'))
-    compiling = subprocess.run(["./a.out"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(compiling.stdout.decode('utf-8','replace'))
+    cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
+    compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print_out(compiling)
+    running = subprocess.run([f"./{c_file[:-2]}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print_out(running)
+    print(running.stdout.decode('utf-8','replace'))
     pass
     
 def main():
