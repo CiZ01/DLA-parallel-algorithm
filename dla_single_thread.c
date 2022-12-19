@@ -1,29 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-int settings[] = {1,2};
-
+#include <time.h>
 
 typedef struct
 {
     int x; // position on x axis
     int y; // position on y axis
 
-    int vel;   // velocity
-    int dire;  // direction
+    int vel;  // velocity
+    int dire; // direction
 
     int stuck; // 0 = not stuck, 1 = stuck
 } particle;
 
-//DA IMPLEMENTARE
-typedef int (*start_dla)(int n, int m, int matrix[n][m], particle *p);
-typedef void (*move)(particle p);
-typedef int (*check_position)(int n, int m, int matrix[n][m], particle *p);
-
+// DA IMPLEMENTARE
+//  typedef int (*start_dla)(int n, int m, int matrix[n][m], particle *p);
+//  typedef void (*move)(particle p);
+//  typedef int (*check_position)(int n, int m, int matrix[n][m], particle *p);
 
 void gen_matrix(int n, int m, int matrix[n][m], int seed[2]);
-void move(particle *part);
+void move(particle *part, int n, int m);
 int gen_particles(int num_particles, particle particles_list[num_particles], char *particle_arg);
 int start_DLA(int num_particles, particle particles_list[num_particles], int n, int m, int matrix[n][m]);
 int check_position(int n, int m, int matrix[n][m], particle *p);
@@ -32,16 +29,17 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
 {
     if (p->stuck == 1)
     {
-        return 0;
+        return -1;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    for (int i = 0; i < 8; i+=2)
+    matrix[p->x][p->y] = 2;
+
+    for (int i = 0; i < 8; i += 2)
     {
         int near_x = p->x + directions[i];
         int near_y = p->y + directions[i + 1];
-
-        if (near_x > 0 || near_x < n || near_y > 0 || near_y < m)
+        if (near_x > 0 && near_x < n && near_y > 0 && near_y < m)
         {
             if (matrix[near_x][near_y] == 1)
             {
@@ -54,11 +52,12 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
     return 0;
 }
 
-void move(particle *p)
+void move(particle *p, int n, int m)
 {
     // move particle
-    p->x += p->vel*((rand()%2)-1);
-    p->y += p->vel*((rand()%2)-1);
+    p->x += rand() % 3 - 1;
+    p->y += rand() % 3 - 1;
+    printf("Particle moved to (%d, %d) \n", p->x, p->y);
 }
 
 int gen_particles(int num_particles, particle particles_list[num_particles], char *particle_arg)
@@ -110,15 +109,16 @@ void gen_matrix(int n, int m, int matrix[n][m], int seed[2])
 
 void print_matrix(int n, int m, int matrix[n][m])
 {
-    int i, j;
-    for (i = 0; i < n; i++)
+    int a, b;
+    for (a = 0; a < n; a++)
     {
-        for (j = 0; j < m; j++)
+        for (b = 0; b < m; b++)
         {
-            printf("%d ", matrix[i][j]);
+            printf("%d ", matrix[a][b]);
         }
         printf("\n");
     }
+    printf("-----------------------------------------------------\n");
 }
 
 int start_DLA(int num_particles,
@@ -128,17 +128,25 @@ int start_DLA(int num_particles,
 {
     printf("Starting DLA\n");
     print_matrix(n, m, matrix);
-    int i;
-    for (i = 0; i < num_particles; i++)
+    int t;
+    for (t = 0; t < 100; t++)
     {
-        particle *p = &particles_list[i];
-        printf("Particle %d: (%d, %d) \n", i, p->x, p->y);
-        if (p->stuck == 0)
+        int i;
+        for (i = 0; i < num_particles; i++)
         {
-            
-            if(check_position(n, m, matrix, p) == 0){move(p);}
+            srand(time(NULL));
+            particle *p = &particles_list[i];
+            if (p->stuck == 0)
+            {
+                int err = check_position(n, m, matrix, p);
+                if (err == 0)
+                {
+                    move(p, n, m);
+                }
+            }
         }
     }
+    check_position(n, m, matrix, &particles_list[num_particles-1]);
     printf("Finished DLA\n");
     return 0;
 }
