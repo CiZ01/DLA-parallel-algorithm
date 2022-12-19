@@ -13,7 +13,7 @@ Più precisamente l'algoritmo deve studiare la crescita di un cristallo posizion
 le particelle vengono posizionate casualmente e si muovono in modo casuale, seguono un Moto Browniano.
 ''' 
 
-import random
+import random as r
 import sys
 import subprocess
 import os
@@ -21,6 +21,7 @@ import os
 RANDOM_SEED = 42
 OUTPUT_FILE = "output.txt"
 NUM_THREADS = 4
+NUM_PARTICLES = 10
 
 C_FILE = "dla_single_thread.c"
 
@@ -46,9 +47,11 @@ for arg in sys.argv:
     m = int(sys.argv[1].split(',')[1])
     
     num_threads = int(sys.argv[2]) if len(sys.argv) > 2 else NUM_THREADS
+
+    num_particles = int(sys.argv[3]) if len(sys.argv) > 3 else NUM_PARTICLES
     
-    c_file = sys.argv[3] if len(sys.argv) > 3 else C_FILE
-    output_file = sys.argv[4] if len(sys.argv) > 4 else OUTPUT_FILE
+    c_file = sys.argv[4] if len(sys.argv) > 4 else C_FILE
+    output_file = sys.argv[5] if len(sys.argv) > 5 else OUTPUT_FILE
     
     
     
@@ -61,9 +64,12 @@ def set_seed() -> tuple(int, int):
     
     return: tuple(i,j) che rappresenta la posizione del seed nella matrice.
     '''
-    random.seed(RANDOM_SEED)
-    return (random.randint(0, n-1), random.randint(0, m-1))
+    r.seed(RANDOM_SEED)
+    return (r.randint(0, n-1), r.randint(0, m-1))
 
+def particle_generate(num_particles):
+    return ', '.join([f"{r.randint(0, n-1)}, {r.randint(0, m-1)}, {r.randint(0, 10)}" for i in range(num_particles)])
+    
 
 def execute_c_program():
     '''
