@@ -1,5 +1,7 @@
 #! /bin/python3
 
+#TODO crea una funzione per generare le particelle
+
 '''
 Questo script produce dei test per il progetto 5 di Sistemi Embedded e Multicore 2022/2023.
 Più che dei test produce dei valori da passare al programma scritto in C.
@@ -31,8 +33,8 @@ def print_out(out : subprocess.CompletedProcess):
 
 '''
 È possibile passare i seguenti parametri:
->*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne. 
->  num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
+>*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne.
+>   num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
 >   c_file: eseguibile C da usare per il calcolo parallelo. Se non specificato viene usato `DA DEFINIRE`.
 >   output_filename: file di output. Se non specificato viene usato `output.txt`.
 
@@ -50,7 +52,7 @@ for arg in sys.argv:
     
     
     
-def set_seed():
+def set_seed() -> tuple(int, int):
     '''
     Aggiunge il seed alla matrice.
     Da questo seed si svilupperà il cristallo.
@@ -68,12 +70,25 @@ def execute_c_program():
     Compila il programma C.
     Passa i parametri al programma e lo esegue.
     
+    I parametri da passare sono:
+    >*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne.
+    >*  particles_list: lista di particelle da posizionare nella matrice. 
+        Le particelle sono dichiarate nel seguente modo: (i , j , v).
+        - i: riga
+        - j: colonna
+        - v: velocità
+    >*  num_particles: numero totale di particelle.
+    >   num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
+
+    
     DA IMPLEMENTARE:    teoricamente può anche aspettare termini e prendersi il return. 
                         per ora l'idea è che il programma C scriva su file.
     '''
     cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
+    # compiling
     compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print_out(compiling)
+    # running 
     running = subprocess.run([f"./{c_file[:-2]}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print_out(running)
     print(running.stdout.decode('utf-8','replace'))
