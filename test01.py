@@ -1,7 +1,5 @@
 #! /bin/python3
 
-#TODO crea una funzione per generare le particelle
-
 '''
 Questo script produce dei test per il progetto 5 di Sistemi Embedded e Multicore 2022/2023.
 Più che dei test produce dei valori da passare al programma scritto in C.
@@ -17,8 +15,9 @@ import random as r
 import sys
 import subprocess
 import os
+import time
 
-RANDOM_SEED = 42
+RANDOM_SEED = time.time() # 1629740000.0
 OUTPUT_FILE = "output.txt"
 NUM_THREADS = 4
 NUM_PARTICLES = 10
@@ -55,7 +54,7 @@ for arg in sys.argv:
     
     
     
-def set_seed() -> tuple(int, int):
+def set_seed():
     '''
     Aggiunge il seed alla matrice.
     Da questo seed si svilupperà il cristallo.
@@ -65,7 +64,7 @@ def set_seed() -> tuple(int, int):
     return: tuple(i,j) che rappresenta la posizione del seed nella matrice.
     '''
     r.seed(RANDOM_SEED)
-    return (r.randint(0, n-1), r.randint(0, m-1))
+    return r.randint(0, m-1), r.randint(0, n-1)
 
 def particle_generate(num_particles):
     return ', '.join([f"{r.randint(0, n-1)}, {r.randint(0, m-1)}, {r.randint(0, 10)}" for i in range(num_particles)])
@@ -90,18 +89,24 @@ def execute_c_program():
     DA IMPLEMENTARE:    teoricamente può anche aspettare termini e prendersi il return. 
                         per ora l'idea è che il programma C scriva su file.
     '''
-    cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
+    #cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
     # compiling
-    compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print_out(compiling)
+    #compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #print_out(compiling)
+    seed = set_seed()
     # running 
-    running = subprocess.run([f"./{c_file[:-2]}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print_out(running)
-    print(running.stdout.decode('utf-8','replace'))
+    particles_list = particle_generate(num_particles)
+    arg = f"{n},{m}|{seed[0]},{seed[1]}|{particles_list}|{num_particles}".split("|")
+    cmd_running = [f"./{c_file[:-2]}"] + arg
+    print(cmd_running)
+    running = subprocess.run(cmd_running, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(running.stderr.decode('utf-8','replace'))
+    print(running.stdout.decode('utf-8'))
     pass
     
 def main():
-    execute_c_program()
+    for i in range(1):
+        execute_c_program()
     return
 
 if __name__ == '__main__':
