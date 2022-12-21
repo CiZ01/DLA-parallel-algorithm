@@ -3,15 +3,23 @@
 #include <string.h>
 #include <time.h>
 
+#define ITERATIONS 100
+
 typedef struct
 {
     int x; // position on x axis
     int y; // position on y axis
+} position;
+
+typedef struct
+{
+    position *current_position;
 
     int vel;  // velocity
     int dire; // direction
 
-    int stuck; // 0 = not stuck, 1 = stuck
+    int stuck;      // 0 = not stuck, 1 = stuck
+    position *path; // history path of the particle
 } particle;
 
 // DA IMPLEMENTARE
@@ -31,8 +39,9 @@ int check_position(int n, int m, int matrix[n][m], particle *p);
  * Se la particella è rimasta bloccata, la funzione ritorna -1, altrimenti ritorna 0.
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
-*/
+ */
 int check_position(int n, int m, int matrix[n][m], particle *p)
+
 {
     if (p->stuck == 1)
     {
@@ -43,14 +52,14 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
 
     for (int i = 0; i < 8; i += 2)
     {
-        int near_y = p->y + directions[i];
-        int near_x = p->x + directions[i + 1];
+        int near_y = p->current_position->y + directions[i];
+        int near_x = p->current_position->x + directions[i + 1];
         if (near_x > 0 && near_x < n && near_y > 0 && near_y < m)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                printf("Particle stuck at (%d, %d) \n",p->y, p->x);
-                matrix[p->y][p->x] = 1;
+                printf("Particle stuck at (%d, %d) \n", p->current_position->y, p->current_position->x);
+                matrix[p->current_position->y][p->current_position->x] = 1;
                 p->stuck = 1;
                 return -1;
             }
@@ -65,17 +74,12 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
  * La funzione modifica la matrice e la particella a ogni chiamata simulando il movimento della particella.
  * Quest'ultima funzionalità penso sia solo a scopo di TEST.
  * La funzione non ritorna nulla.
-*/
+ */
 void move(particle *p, int n, int m, int matrix[n][m])
 {
-    if (p->x > 0 && p->x < n && p->y > 0 && p->y < m)   
-        matrix[p->y][p->x] = 0;
     // move particle
-    p->x += rand() % 3 - 1;
-    p->y += rand() % 3 - 1;
-    if (p->x > 0 && p->x < n && p->y > 0 && p->y < m)
-        matrix[p->y][p->x] = 2;
-
+    p->current_position->x += rand() % 3 - 1;
+    p->current_position->y += rand() % 3 - 1;
 }
 
 /*
@@ -84,7 +88,7 @@ void move(particle *p, int n, int m, int matrix[n][m])
  * La stringa deve essere formattata nel seguente modo: "i,j,v,i,j,v,i,j,v,..." dove i e j sono le coordinate della particella e v è la velocità.
  * La funzione ritorna 0 se la generazione è andata a buon fine, altrimenti ritorna 1.
  * La funzione modifica la lista di particelle.
-*/
+ */
 int gen_particles(int num_particles, particle *particles_list, char *particle_arg)
 {
     // get data from particle_arg
@@ -108,9 +112,15 @@ int gen_particles(int num_particles, particle *particles_list, char *particle_ar
 
         // create particle
         particle *p = malloc(sizeof(particle));
-        p->x = i;
-        p->y = j;
+        position *cp = malloc(sizeof(position));
+        cp->x = i;
+        cp->y = j;
+        p->current_position = cp;
+
         p->vel = v;
+        p->stuck = 0;
+        p->path = malloc(sizeof(position) * ITERATIONS);
+        p->path[0] = *p->current_position;
 
         // add particle to list
         particles_list[index] = *p;
@@ -119,12 +129,11 @@ int gen_particles(int num_particles, particle *particles_list, char *particle_ar
     return 0;
 }
 
-
 /*
  * print_matrix stampa la matrice.
  * La funzione riceve in input le dimensioni della matrice e la matrice.
- * La funzione non ritorna nulla.    
-*/
+ * La funzione non ritorna nulla.
+ */
 void print_matrix(int n, int m, int matrix[n][m])
 {
     int a, b;
@@ -147,12 +156,12 @@ void print_matrix(int n, int m, int matrix[n][m])
  *  - per ogni particella viene chiamata la funzione check_position che controlla se la particella è in prossimità di un cristallo,
  *    in caso affermativo blocca la particella e da quel momento inizia a far parte del cristallo. Altrimenti la particella si muove.
  *  - nel caso in cui la particella non sia rimasta bloccata, viene chiamata la funzione move che si occupa di muoverla.
- * 
+ *
  * L'algoritmo termina al raggiungimento di un valore t.
  * La funzione riceve in input il numero di particelle, la lista di particelle, le dimensioni della matrice e la matrice.
  * La funzione ritorna 0 se l'esecuzione è andata a buon fine, altrimenti ritorna 1.
- * 
-*/
+ *
+ */
 int start_DLA(int num_particles,
               particle *particles_list,
               int n, int m,
@@ -161,7 +170,7 @@ int start_DLA(int num_particles,
     printf("Starting DLA\n");
     int t;
     srand(time(NULL));
-    for (t = 0; t < 100; t++)
+    for (t = 0; t < ITERATIONS; t++)
     {
         int i;
         for (i = 0; i < num_particles; i++)
@@ -174,6 +183,7 @@ int start_DLA(int num_particles,
                 {
                     move(p, n, m, matrix);
                 }
+                p->path[t] = *p->current_position;
             }
         }
     }
@@ -202,7 +212,7 @@ int main(int argc, char *argv[])
 
     // create matrix
     int matrix[n][m];
-    memset(matrix, 0, sizeof(matrix[0][0]) * n* m);
+    memset(matrix, 0, sizeof(matrix[0][0]) * n * m);
     matrix[seed[0]][seed[1]] = 1;
 
     // get particle data
@@ -216,7 +226,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // first print 
+    // first print
     print_matrix(n, m, matrix);
     fflush(stdout);
     // start DLA
@@ -227,25 +237,30 @@ int main(int argc, char *argv[])
 
     FILE *fptr;
 
-   // use appropriate location if you are using MacOS or Linux
-   fptr = fopen("matrix.txt","w");
+    // use appropriate location if you are using MacOS or Linux
+    fptr = fopen("matrix.txt", "w");
 
-   if(fptr == NULL)
-   {
-      printf("Error!");   
-      exit(1);             
-   }
+    if (fptr == NULL)
+    {
+        printf("Error!");
+        exit(1);
+    }
 
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < m; j++)
         {
-            fprintf(fptr,"%d ", matrix[i][j]);
+            fprintf(fptr, "%d ", matrix[i][j]);
         }
-        fprintf(fptr,"\n");
+        fprintf(fptr, "\n");
     }
 
-    // the list is fr
+    for (int i = 0; i < num_particles; i++)
+    {
+        particle *p = &particles_list[i];
+        free(p->current_position);
+        free(p->path);
+    }
     free(particles_list);
 
     return 0;
