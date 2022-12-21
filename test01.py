@@ -16,9 +16,11 @@ import sys
 import subprocess
 import os
 import time
+import glob
+from PIL import Image
 
 RANDOM_SEED = time.time() # 1629740000.0
-OUTPUT_FILE = "output.txt"
+OUTPUT_FILE = "matrix.txt"
 NUM_THREADS = 4
 NUM_PARTICLES = 10
 
@@ -98,15 +100,53 @@ def execute_c_program():
     particles_list = particle_generate(num_particles)
     arg = f"{n},{m}|{seed[0]},{seed[1]}|{particles_list}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + arg
-    print(cmd_running)
+    #print(cmd_running)
     running = subprocess.run(cmd_running, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(running.stderr.decode('utf-8','replace'))
-    print(running.stdout.decode('utf-8'))
+    #print(running.stderr.decode('utf-8','replace'))
+    #print(running.stdout.decode('utf-8'))
     pass
+
+def get_output_matrix():
+    '''
+    Legge il file di output e restituisce la matrice.
+    '''
+    matrix = []
+    with open(OUTPUT_FILE, "r") as f:
+        for line in f:
+            matrix += [line.split(" ")[:-1]]
+    return matrix
+
+def make_img() -> Image:
+    matrix = get_output_matrix()
+    n,m = len(matrix), len(matrix[0])
+    
+    img = Image.new('RGB', (n, m))
+    data = img.load()
+    
+    print(matrix)
+    for i in range(n):
+        for j in range(m):
+            if matrix[i][j] == "1":
+                data[j,i] = (0,0,0)
+            elif matrix[i][j] == "2":
+                data[j,i] = (255,0,0)
+            else:
+                data[j,i] = (255,255,255)
+    return img
+
+def make_gif():
+    frames = [Image.open(image) for image in glob.glob(f"imgs/*.png")]
+    frame_one = frames[0]
+    frame_one.save("matrixs.gif", format="GIF", append_images=frames,
+               save_all=True, duration=100, loop=0)
     
 def main():
-    for i in range(1):
+    for i in range(100):
         execute_c_program()
+        img = make_img()
+        img.save(f"./imgs/matrix{i}.png")
+    
+    make_gif()
     return
 
 if __name__ == '__main__':

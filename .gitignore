@@ -1,12 +1,10 @@
-<<<<<<< HEAD
 .vscode
 .out
 .exe
 .git
 out*
-=======
-.vscode
-.out
-.exe
-.git
->>>>>>> 7779ff544d125baa35fcc37d5a605506cd953f38
+./img
+*.jpg
+*.png
+*.gif
+matrix.txt

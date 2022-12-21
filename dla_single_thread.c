@@ -19,7 +19,6 @@ typedef struct
 //  typedef void (*move)(particle p);
 //  typedef int (*check_position)(int n, int m, int matrix[n][m], particle *p);
 
-void gen_matrix(int n, int m, int matrix[n][m], int seed[2]);
 void print_matrix(int n, int m, int matrix[n][m]);
 void move(particle *part, int n, int m, int matrix[n][m]);
 int gen_particles(int num_particles, particle *particles_list, char *particle_arg);
@@ -225,6 +224,26 @@ int main(int argc, char *argv[])
 
     print_matrix(n, m, matrix);
     fflush(stdout);
+
+    FILE *fptr;
+
+   // use appropriate location if you are using MacOS or Linux
+   fptr = fopen("matrix.txt","w");
+
+   if(fptr == NULL)
+   {
+      printf("Error!");   
+      exit(1);             
+   }
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < m; j++)
+        {
+            fprintf(fptr,"%d ", matrix[i][j]);
+        }
+        fprintf(fptr,"\n");
+    }
 
     // the list is fr
     free(particles_list);
