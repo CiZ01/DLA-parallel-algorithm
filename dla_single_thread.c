@@ -117,8 +117,8 @@ int gen_particles(int num_particles, particle *particles_list, char *particle_ar
         // create particle
         particle *p = malloc(sizeof(particle));
         position *cp = malloc(sizeof(position));
-        cp->x = i;
-        cp->y = j;
+        cp->x = j;
+        cp->y = i;
         p->current_position = cp;
 
         p->vel = v;
@@ -176,7 +176,7 @@ int start_DLA(int num_particles,
     printf("Starting DLA\n");
     int t;
     srand(time(NULL));
-    for (t = 0; t < ITERATIONS; t++)
+    for (t = 1; t < ITERATIONS; t++)
     {
         int i;
         for (i = 0; i < num_particles; i++)
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
         particle *p = &particles_list[i];
         for (int j = 0; j < ITERATIONS; j++)
         {
-            fprintf(fptr2, "%d,%d,", p->path[j].x, p->path[j].y);
+            fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
         }
         fprintf(fptr2, "\n");
     }

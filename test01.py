@@ -16,6 +16,7 @@ import subprocess
 import os
 import time
 import glob
+import images
 from PIL import Image
 
 RANDOM_SEED = time.time()  # 1629740000.0
@@ -68,8 +69,8 @@ def set_seed():
     
     return: tuple(i,j) che rappresenta la posizione del seed nella matrice.
     '''
-    r.seed(RANDOM_SEED)
-    return r.randint(0, m - 1), r.randint(0, n - 1)
+    r.seed(time.time())
+    return r.randint(0, n - 1), r.randint(0, m - 1)
 
 
 def particle_generate(num_particles):
@@ -121,7 +122,7 @@ def execute_c_program():
                              stderr=subprocess.PIPE)
     print(running.stderr.decode('utf-8', 'replace'))
     print(running.stdout.decode('utf-8'))
-    pass
+    return seed
 
 
 def get_output_matrix():
@@ -147,19 +148,16 @@ def get_output_paths():
     return paths
 
 
-def make_img(paths):
+def make_img(paths, seed):
     matrix = get_output_matrix()
     n, m = len(matrix), len(matrix[0])
 
-    img = Image.new('RGB', (n, m))
-    data = img.load()
+    img = [[(255,255,255) for i in range(m)] for j in range(n)]
 
-    for i in range(m):
-        for j in range(n):
-            data[j, i] = (255, 255, 255)
-
+    img[seed[0]][seed[1]] = (0, 0, 0)
+    
     blank = img.copy()
-
+    
     # 1,2,4,5,6,7
 
     for i in range(0, len(paths[0]), 2):
@@ -176,57 +174,57 @@ def make_img(paths):
                 next_y = -1
                 next_x = -1
 
-            if (y < n and x < m) and (y > 0 and x > 0):
+            if (y < n and x < m) and (y >= 0 and x >= 0):
                 if (next_y, next_x) == (0, 0):
-                    data[x, y] = (0, 0, 0)
+                    img[y][x] = (0, 0, 0)
+                    blank[y][x] = (0, 0, 0)
                 else:
-                    data[x, y] = (255, 0, 0)
+                    img[y][x] = (255, 0, 0)
 
-        img.save(f"imgs/matrix{i-1}.png")
+        images.save(img ,f"imgs/matrix{i//2}.png")
         img = blank.copy()
-        data = img.load()
     return
 
 
-def make_img_matrix() -> Image:
-    matrix = get_output_matrix()
-    n, m = len(matrix), len(matrix[0])
-
-    img = Image.new('RGB', (n, m))
-    data = img.load()
-
-    #print(matrix)
+def make_matrix():
+    tmpmatrix = get_output_matrix()
+    n, m = len(tmpmatrix), len(tmpmatrix[0])
+    
+    matrix = [[(255,255,255) for i in range(m)] for j in range(n)]
+    
+    
     for i in range(n):
         for j in range(m):
-            if matrix[i][j] == "1":
-                data[j, i] = (0, 0, 0)
-            elif matrix[i][j] == "2":
-                data[j, i] = (255, 0, 0)
+            if tmpmatrix[i][j] == "1":
+                matrix[i][j] = (0, 0, 0)
+            elif tmpmatrix[i][j] == "2":
+                matrix[i][j] = (255, 0, 0)
             else:
-                data[j, i] = (255, 255, 255)
-    return img
+                matrix[i][j] = (255, 255, 255)
+    return matrix
 
 
 def make_gif():
-    frames = [Image.open(image) for image in glob.glob(f"imgs/*.png")]
+    frames = [Image.open(image) for image in glob.glob(f"imgs/matrix*.png")]
     frame_one = frames[0]
     frame_one.save("paths.gif",
                    format="GIF",
                    append_images=frames,
                    save_all=True,
-                   duration=1000,
+                   duration=300,
                    loop=0)
 
 
 def main():
     for i in range(1):
-        execute_c_program()
-        paths = get_output_paths()
-        make_img(paths)  # genera le immagini per ogni iterazione
-        img = make_img_matrix()
-        img.save(f"./imgs/matrix_f.png")
+        seed = execute_c_program()
+        #paths = get_output_paths()
+        #make_img(paths, seed)  # genera le immagini per ogni iterazione
+        time.sleep(2)
+        matrix = make_matrix()
+        images.save(matrix, f"./imgs/matrix_f{i}.png")
 
-    make_gif()
+    #make_gif()
     return
 
 
