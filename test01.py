@@ -24,6 +24,8 @@ OUTPUT_FILE = "matrix.txt"
 NUM_THREADS = 4
 NUM_PARTICLES = 10
 
+total_time = 0
+
 C_FILE = "dla_single_thread.c"
 
 
@@ -106,20 +108,22 @@ def execute_c_program():
     seed = set_seed()
     # running
 
-    particles_list = particle_generate(num_particles)
-    for i in range(0, num_particles, 3):
-        if particles_list[i] == seed[0] and particles_list[i + 1] == seed[1]:
-            particles_list = particles_list[0:i] + particles_list[i + 3:]
+    #particles_list = particle_generate(num_particles)
 
-    print(f"input:{seed}|{particles_list}")
+    #print(f"input:{seed}|{particles_list}")
 
-    arg = f"{n},{m}|{seed[0]},{seed[1]}|{particles_list}|{num_particles}".split(
-        "|")
+    arg = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + arg
     #print(cmd_running)
+    start = time.time()
     running = subprocess.run(cmd_running,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
+    end = time.time()
+
+    global total_time
+    total_time += end - start
+
     print(running.stderr.decode('utf-8', 'replace'))
     print(running.stdout.decode('utf-8'))
     return seed
@@ -133,6 +137,12 @@ def get_output_matrix():
     with open(OUTPUT_FILE, "r") as f:
         for line in f:
             matrix += [line.split(" ")[:-1]]
+    if len(matrix) == 0:
+        with open("errors.txt", "a") as f:
+            f.write("Matrix is empty\n")
+            return []
+    with open("matrix.txt", "w") as f:
+        pass
     return matrix
 
 
@@ -152,12 +162,12 @@ def make_img(paths, seed):
     matrix = get_output_matrix()
     n, m = len(matrix), len(matrix[0])
 
-    img = [[(255,255,255) for i in range(m)] for j in range(n)]
+    img = [[(255, 255, 255) for i in range(m)] for j in range(n)]
 
     img[seed[0]][seed[1]] = (0, 0, 0)
-    
+
     blank = img.copy()
-    
+
     # 1,2,4,5,6,7
 
     for i in range(0, len(paths[0]), 2):
@@ -181,18 +191,21 @@ def make_img(paths, seed):
                 else:
                     img[y][x] = (255, 0, 0)
 
-        images.save(img ,f"imgs/matrix{i//2}.png")
+        images.save(img, f"imgs/matrix{i//2}.png")
         img = blank.copy()
     return
 
 
 def make_matrix():
     tmpmatrix = get_output_matrix()
+    if len(tmpmatrix) == 0:
+        print("--------- Matrix is empty --------- \n")
+        return []
+
     n, m = len(tmpmatrix), len(tmpmatrix[0])
-    
-    matrix = [[(255,255,255) for i in range(m)] for j in range(n)]
-    
-    
+
+    matrix = [[(255, 255, 255) for i in range(m)] for j in range(n)]
+
     for i in range(n):
         for j in range(m):
             if tmpmatrix[i][j] == "1":
@@ -216,15 +229,16 @@ def make_gif():
 
 
 def main():
-    for i in range(1):
+    for i in range(200):
         seed = execute_c_program()
         #paths = get_output_paths()
         #make_img(paths, seed)  # genera le immagini per ogni iterazione
-        time.sleep(2)
         matrix = make_matrix()
-        images.save(matrix, f"./imgs/matrix_f{i}.png")
+        if len(matrix) != 0:
+            images.save(matrix, f"./imgs/matrix_f{i}.png")
 
     #make_gif()
+    print(f"tempo totale: {total_time}")
     return
 
 

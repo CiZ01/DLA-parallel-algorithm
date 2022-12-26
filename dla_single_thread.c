@@ -23,15 +23,36 @@ typedef struct
 } particle;
 
 // DA IMPLEMENTARE
-//  typedef int (*start_dla)(int n, int m, int matrix[n][m], particle *p);
+//  typedef int (*start_dla)(int  n, int m, int matrix[n][m], particle *p);
 //  typedef void (*move)(particle p);
-//  typedef int (*check_position)(int n, int m, int matrix[n][m], particle *p);
+//  typedef int (*check_position)(int  n, int m, int matrix[n][m], particle *p);
 
-void print_matrix(int n, int m, int matrix[n][m]);
-void move(particle *part, int n, int m, int matrix[n][m]);
-int gen_particles(int num_particles, particle *particles_list, char *particle_arg);
-int start_DLA(int num_particles, particle *particles_list, int n, int m, int matrix[n][m]);
-int check_position(int n, int m, int matrix[n][m], particle *p);
+void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed);
+void print_matrix(unsigned int n, unsigned int m, int **matrix);
+void move(particle *part, unsigned int n, unsigned int m, int **matrix);
+void gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m);
+int start_DLA(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m, int **matrix);
+int check_position(unsigned int n, unsigned int m, int **matrix, particle *p);
+
+void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed)
+{
+    // get matrix dimensions
+    char *sizes = argv[1];
+    char *token = strtok(sizes, ",");
+    *n = (unsigned int)atoi(token);
+    token = strtok(NULL, ",");
+    *m = (unsigned int)atoi(token);
+
+    // get seed position
+    char *seed_pos = argv[2];
+    token = strtok(seed_pos, ",");
+    seed[0] = (unsigned int)atoi(token);
+    token = strtok(NULL, ",");
+    seed[1] = (unsigned int)atoi(token);
+
+    // get number of particles
+    *num_particles = (unsigned int)atoi(argv[3]);
+}
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -40,7 +61,7 @@ int check_position(int n, int m, int matrix[n][m], particle *p);
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
-int check_position(int n, int m, int matrix[n][m], particle *p)
+int check_position(unsigned int n, unsigned int m, int **matrix, particle *p)
 
 {
     if (p->stuck == 1)
@@ -50,7 +71,7 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
-    for (int i = 0; i < 8; i += 2)
+    for (unsigned int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
@@ -58,7 +79,6 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                printf("Particle stuck at (%d, %d) \n", p->current_position->y, p->current_position->x);
                 matrix[p->current_position->y][p->current_position->x] = 1;
                 p->stuck = 1;
                 return -1;
@@ -75,7 +95,7 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
  * Quest'ultima funzionalità penso sia solo a scopo di TEST.
  * La funzione non ritorna nulla.
  */
-void move(particle *p, int n, int m, int matrix[n][m])
+void move(particle *p, unsigned int n, unsigned int m, int **matrix)
 {
 
     // move particle
@@ -93,46 +113,27 @@ void move(particle *p, int n, int m, int matrix[n][m])
  * La funzione ritorna 0 se la generazione è andata a buon fine, altrimenti ritorna 1.
  * La funzione modifica la lista di particelle.
  */
-int gen_particles(int num_particles, particle *particles_list, char *particle_arg)
+void gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m)
 {
-    // get data from particle_arg
-    char *token = strtok(particle_arg, ",");
-    int index = 0;
-    while (token != NULL)
+
+    if (num_particles >= n * m)
     {
-        if (index == num_particles)
-        {
-            printf("Error: too many particles\n");
-            return 1;
-        }
-
-        // get particle data
-        int i = (int)atoi(token);
-        token = strtok(NULL, ",");
-        int j = (int)atoi(token);
-        token = strtok(NULL, ",");
-        int v = (int)atoi(token);
-        token = strtok(NULL, ",");
-
-        // create particle
-        particle *p = malloc(sizeof(particle));
-        position *cp = malloc(sizeof(position));
-        cp->x = j;
-        cp->y = i;
-        p->current_position = cp;
-
-        p->vel = v;
-        p->dire = 1;
-
-        p->stuck = 0;
-        p->path = malloc(sizeof(position) * ITERATIONS);
-        p->path[0] = *p->current_position;
-
-        // add particle to list
-        particles_list[index] = *p;
-        index++;
+        printf("Too many particles for the matrix size. \n");
+        exit(1);
     }
-    return 0;
+
+    // get data from particle_arg
+    srand(time(NULL));
+    for (unsigned int i = 0; i < num_particles; i++)
+    {
+        particles_list[i].current_position = malloc(sizeof(position));
+        particles_list[i].current_position->x = rand() % m;
+        particles_list[i].current_position->y = rand() % n;
+        particles_list[i].vel = rand() % 10;
+        particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
+        particles_list[i].stuck = 0;
+        particles_list[i].path = malloc(sizeof(position) * ITERATIONS);
+    }
 }
 
 /*
@@ -140,9 +141,9 @@ int gen_particles(int num_particles, particle *particles_list, char *particle_ar
  * La funzione riceve in input le dimensioni della matrice e la matrice.
  * La funzione non ritorna nulla.
  */
-void print_matrix(int n, int m, int matrix[n][m])
+void print_matrix(unsigned int n, unsigned int m, int **matrix)
 {
-    int a, b;
+    unsigned int a, b;
     for (a = 0; a < n; a++)
     {
         for (b = 0; b < m; b++)
@@ -168,17 +169,17 @@ void print_matrix(int n, int m, int matrix[n][m])
  * La funzione ritorna 0 se l'esecuzione è andata a buon fine, altrimenti ritorna 1.
  *
  */
-int start_DLA(int num_particles,
+int start_DLA(unsigned int num_particles,
               particle *particles_list,
-              int n, int m,
-              int matrix[n][m])
+              unsigned int n, unsigned int m,
+              int **matrix)
 {
     printf("Starting DLA\n");
-    int t;
+    unsigned int t;
     srand(time(NULL));
     for (t = 1; t < ITERATIONS; t++)
     {
-        int i;
+        unsigned int i;
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -199,48 +200,41 @@ int start_DLA(int num_particles,
 
 int main(int argc, char *argv[])
 {
-    int n, m;    // matrix dimensions
-    int seed[2]; // seed position
 
-    // get matrix dimensions
-    char *sizes = argv[1];
-    char *token = strtok(sizes, ",");
-    n = (int)atoi(token);
-    token = strtok(NULL, ",");
-    m = (int)atoi(token);
+    unsigned int n, m;          // matrix dimensions
+    unsigned int seed[2];       // seed position
+    unsigned int num_particles; // number of particles
 
-    // get seed position
-    char *seed_pos = argv[2];
-    token = strtok(seed_pos, ",");
-    seed[0] = (int)atoi(token);
-    token = strtok(NULL, ",");
-    seed[1] = (int)atoi(token);
+    get_args(argv, &num_particles, &n, &m, seed);
+    printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
+    // num_particles = 500000;
+    // n = 1000;
+    // m = 1000;
+    // seed[0] = 50;
+    // seed[1] = 50;
 
-    // create matrix
-    int matrix[n][m];
-    memset(matrix, 0, sizeof(matrix[0][0]) * n * m);
-    matrix[seed[0]][seed[1]] = 1;
+    int **matrix;
+    matrix = calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
 
-    // get particle data
-    char *particle_arg = argv[3];
-    int num_particles = (int)atoi(argv[4]);
-    particle *particles_list = malloc(sizeof(particle) * num_particles);
-    // create particles and check for errors
-    if (gen_particles(num_particles, particles_list, particle_arg))
+    for (int i = 0; i < n; i++)
     {
-        printf("Error: could not create particles\n");
-        exit(1);
+        matrix[i] = calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
     }
 
-    // first print
-    print_matrix(n, m, matrix);
-    fflush(stdout);
+    matrix[seed[0]][seed[1]] = 1; // set seed
+
+    particle *particles_list = malloc(sizeof(particle) * num_particles);
+
+    // create particles and check for errors
+    gen_particles(num_particles, particles_list, n, m);
+
+    // print_matrix(n, m, matrix);
+    // fflush(stdout);
     // start DLA
     start_DLA(num_particles, particles_list, n, m, matrix);
 
-    print_matrix(n, m, matrix);
-    fflush(stdout);
-
+    // print_matrix(n, m, matrix);
+    // fflush(stdout);
     FILE *fptr;
 
     // use appropriate location if you are using MacOS or Linux
@@ -252,9 +246,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    for (int i = 0; i < n; i++)
+    for (unsigned int i = 0; i < n; i++)
     {
-        for (int j = 0; j < m; j++)
+        for (unsigned int j = 0; j < m; j++)
         {
             fprintf(fptr, "%d ", matrix[i][j]);
         }
@@ -273,18 +267,28 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    for (int i = 0; i < num_particles; i++)
+    for (unsigned int i = 0; i < num_particles; i++)
     {
         particle *p = &particles_list[i];
-        for (int j = 0; j < ITERATIONS; j++)
+        for (unsigned int j = 0; j < ITERATIONS; j++)
         {
             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
         }
         fprintf(fptr2, "\n");
     }
 
+    fclose(fptr2);
+
+    // free matrix
+    for (int i = 0; i < n; i++)
+    {
+        free(matrix[i]); // Libera la memoria della riga i-esima
+    }
+
+    free(matrix);
+
     // free memory
-    for (int i = 0; i < num_particles; i++)
+    for (unsigned int i = 0; i < num_particles; i++)
     {
         particle *p = &particles_list[i];
         free(p->current_position);
