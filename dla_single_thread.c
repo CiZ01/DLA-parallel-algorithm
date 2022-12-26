@@ -77,9 +77,13 @@ int check_position(int n, int m, int matrix[n][m], particle *p)
  */
 void move(particle *p, int n, int m, int matrix[n][m])
 {
+
     // move particle
-    p->current_position->x += rand() % 3 - 1;
-    p->current_position->y += rand() % 3 - 1;
+    p->dire = rand() % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand() % 2 * p->dire;
+
+    p->dire = rand() % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand() % 2 * p->dire;
 }
 
 /*
@@ -118,6 +122,8 @@ int gen_particles(int num_particles, particle *particles_list, char *particle_ar
         p->current_position = cp;
 
         p->vel = v;
+        p->dire = 1;
+
         p->stuck = 0;
         p->path = malloc(sizeof(position) * ITERATIONS);
         p->path[0] = *p->current_position;
@@ -255,6 +261,29 @@ int main(int argc, char *argv[])
         fprintf(fptr, "\n");
     }
 
+    // close file
+    fclose(fptr);
+
+    FILE *fptr2;
+    fptr2 = fopen("paths.txt", "w");
+
+    if (fptr2 == NULL)
+    {
+        printf("Error!");
+        exit(1);
+    }
+
+    for (int i = 0; i < num_particles; i++)
+    {
+        particle *p = &particles_list[i];
+        for (int j = 0; j < ITERATIONS; j++)
+        {
+            fprintf(fptr2, "%d,%d,", p->path[j].x, p->path[j].y);
+        }
+        fprintf(fptr2, "\n");
+    }
+
+    // free memory
     for (int i = 0; i < num_particles; i++)
     {
         particle *p = &particles_list[i];

@@ -135,7 +135,60 @@ def get_output_matrix():
     return matrix
 
 
-def make_img() -> Image:
+def get_output_paths():
+    '''
+    Legge il file di output e restituisce il path di tutte le particelle.
+    '''
+
+    paths = []
+    with open('paths.txt', "r") as f:
+        for line in f:
+            paths += [line.split(",")[:-1]]
+    return paths
+
+
+def make_img(paths):
+    matrix = get_output_matrix()
+    n, m = len(matrix), len(matrix[0])
+
+    img = Image.new('RGB', (n, m))
+    data = img.load()
+
+    for i in range(m):
+        for j in range(n):
+            data[j, i] = (255, 255, 255)
+
+    blank = img.copy()
+
+    # 1,2,4,5,6,7
+
+    for i in range(0, len(paths[0]), 2):
+        for j in range(0, len(paths)):
+            y = int(paths[j][i])
+            x = int(paths[j][i + 1])
+            #print(x)
+            #print(y)
+
+            if i + 2 < len(paths[0]):
+                next_y = int(paths[j][i + 2])
+                next_x = int(paths[j][i + 3])
+            else:
+                next_y = -1
+                next_x = -1
+
+            if (y < n and x < m) and (y > 0 and x > 0):
+                if (next_y, next_x) == (0, 0):
+                    data[x, y] = (0, 0, 0)
+                else:
+                    data[x, y] = (255, 0, 0)
+
+        img.save(f"imgs/matrix{i-1}.png")
+        img = blank.copy()
+        data = img.load()
+    return
+
+
+def make_img_matrix() -> Image:
     matrix = get_output_matrix()
     n, m = len(matrix), len(matrix[0])
 
@@ -157,21 +210,23 @@ def make_img() -> Image:
 def make_gif():
     frames = [Image.open(image) for image in glob.glob(f"imgs/*.png")]
     frame_one = frames[0]
-    frame_one.save("matrixs.gif",
+    frame_one.save("paths.gif",
                    format="GIF",
                    append_images=frames,
                    save_all=True,
-                   duration=100,
+                   duration=1000,
                    loop=0)
 
 
 def main():
     for i in range(1):
         execute_c_program()
-        img = make_img()
-        img.save(f"./imgs/matrix{i}.png")
+        paths = get_output_paths()
+        make_img(paths)  # genera le immagini per ogni iterazione
+        img = make_img_matrix()
+        img.save(f"./imgs/matrix_f.png")
 
-    #make_gif()
+    make_gif()
     return
 
 
