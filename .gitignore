@@ -3,8 +3,9 @@
 .exe
 .git
 out*
-./img
+imgs
 *.jpg
 *.png
 *.gif
 matrix.txt
+__pycache__

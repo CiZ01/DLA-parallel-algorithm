@@ -115,18 +115,19 @@ def execute_c_program():
     arg = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + arg
     #print(cmd_running)
+
     start = time.time()
     running = subprocess.run(cmd_running,
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.STDOUT)
     end = time.time()
 
     global total_time
     total_time += end - start
 
-    print(running.stderr.decode('utf-8', 'replace'))
-    print(running.stdout.decode('utf-8'))
-    return seed
+    print(running.stdout.decode('utf-8', 'replace'))
+
+    return
 
 
 def get_output_matrix():
@@ -229,13 +230,16 @@ def make_gif():
 
 
 def main():
-    for i in range(200):
-        seed = execute_c_program()
+    for i in range(10):
+        print("iterazione: ", i)
+        execute_c_program()
         #paths = get_output_paths()
         #make_img(paths, seed)  # genera le immagini per ogni iterazione
-        matrix = make_matrix()
-        if len(matrix) != 0:
-            images.save(matrix, f"./imgs/matrix_f{i}.png")
+        # matrix = make_matrix()
+        # if len(matrix) != 0:
+        #     images.save(matrix, f"./imgs/matrix_f{i}.png")
+        # else:
+        #     break
 
     #make_gif()
     print(f"tempo totale: {total_time}")

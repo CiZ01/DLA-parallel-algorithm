@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #define ITERATIONS 100
 
@@ -28,11 +29,63 @@ typedef struct
 //  typedef int (*check_position)(int  n, int m, int matrix[n][m], particle *p);
 
 void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed);
+int write_matrix(unsigned int n, unsigned int m, int **matrix);
+int write_paths(unsigned int num_particles, particle *particles_list);
 void print_matrix(unsigned int n, unsigned int m, int **matrix);
 void move(particle *part, unsigned int n, unsigned int m, int **matrix);
-void gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m);
+int gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m);
 int start_DLA(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m, int **matrix);
 int check_position(unsigned int n, unsigned int m, int **matrix, particle *p);
+
+int write_matrix(unsigned int n, unsigned int m, int **matrix)
+{
+    FILE *fptr;
+
+    fptr = fopen("matrix.txt", "r+");
+
+    if (fptr == NULL)
+        return 1;
+
+    for (unsigned int i = 0; i < n; i++)
+    {
+        for (unsigned int j = 0; j < m; j++)
+        {
+            fprintf(fptr, "%d ", matrix[i][j]);
+        }
+        fprintf(fptr, "\n");
+    }
+
+    ferror(fptr);
+    // close file
+    fclose(fptr);
+
+    return 0;
+}
+
+int write_paths(unsigned int num_particles, particle *particles_list)
+{
+    FILE *fptr2;
+    fptr2 = fopen("paths.txt", "w");
+
+    if (fptr2 == NULL)
+    {
+        return 1;
+    }
+
+    for (int i = 0; i < num_particles; i++)
+    {
+        particle *p = &particles_list[i];
+        for (int j = 0; j < ITERATIONS; j++)
+        {
+            fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
+        }
+        fprintf(fptr2, "\n");
+    }
+
+    fclose(fptr2);
+
+    return 0;
+}
 
 void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed)
 {
@@ -113,7 +166,7 @@ void move(particle *p, unsigned int n, unsigned int m, int **matrix)
  * La funzione ritorna 0 se la generazione è andata a buon fine, altrimenti ritorna 1.
  * La funzione modifica la lista di particelle.
  */
-void gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m)
+int gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m)
 {
 
     if (num_particles >= n * m)
@@ -127,13 +180,24 @@ void gen_particles(unsigned int num_particles, particle *particles_list, unsigne
     for (unsigned int i = 0; i < num_particles; i++)
     {
         particles_list[i].current_position = malloc(sizeof(position));
+        if (particles_list[i].current_position == NULL)
+        {
+            printf("Error allocating memory for current_position. \n");
+            return 1;
+        }
         particles_list[i].current_position->x = rand() % m;
         particles_list[i].current_position->y = rand() % n;
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
         particles_list[i].path = malloc(sizeof(position) * ITERATIONS);
+        if (particles_list[i].path == NULL)
+        {
+            printf("Error allocating memory for paths. \n");
+            return 1;
+        }
     }
+    return 0;
 }
 
 /*
@@ -206,27 +270,47 @@ int main(int argc, char *argv[])
     unsigned int num_particles; // number of particles
 
     get_args(argv, &num_particles, &n, &m, seed);
-    printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
-    // num_particles = 500000;
-    // n = 1000;
-    // m = 1000;
+    // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
+    // fflush(stdout);
+    // num_particles = 50;
+    // n = 10;
+    // m = 10;
     // seed[0] = 50;
     // seed[1] = 50;
 
     int **matrix;
-    matrix = calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    if (matrix == NULL)
+    {
+        printf("Error allocating memory");
+        return 1;
+    }
 
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        if (matrix[i] == NULL)
+        {
+            printf("Error allocating memory");
+            return 1;
+        }
     }
 
     matrix[seed[0]][seed[1]] = 1; // set seed
 
-    particle *particles_list = malloc(sizeof(particle) * num_particles);
+    particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
+    if (particles_list == NULL)
+    {
+        printf("Error allocating memory");
+        return 1;
+    }
 
     // create particles and check for errors
-    gen_particles(num_particles, particles_list, n, m);
+    if (gen_particles(num_particles, particles_list, n, m) != 0)
+    {
+        printf("Error generating particles. \n");
+        exit(1);
+    }
 
     // print_matrix(n, m, matrix);
     // fflush(stdout);
@@ -235,66 +319,48 @@ int main(int argc, char *argv[])
 
     // print_matrix(n, m, matrix);
     // fflush(stdout);
-    FILE *fptr;
 
-    // use appropriate location if you are using MacOS or Linux
-    fptr = fopen("matrix.txt", "w");
+    // if (write_matrix(n, m, matrix) != 0)
+    // {
+    //     printf("Error writing matrix to file. \n");
+    //     exit(1);
+    // }
 
-    if (fptr == NULL)
-    {
-        printf("Error!");
-        exit(1);
-    }
-
-    for (unsigned int i = 0; i < n; i++)
-    {
-        for (unsigned int j = 0; j < m; j++)
-        {
-            fprintf(fptr, "%d ", matrix[i][j]);
-        }
-        fprintf(fptr, "\n");
-    }
-
-    // close file
-    fclose(fptr);
-
-    FILE *fptr2;
-    fptr2 = fopen("paths.txt", "w");
-
-    if (fptr2 == NULL)
-    {
-        printf("Error!");
-        exit(1);
-    }
-
-    for (unsigned int i = 0; i < num_particles; i++)
-    {
-        particle *p = &particles_list[i];
-        for (unsigned int j = 0; j < ITERATIONS; j++)
-        {
-            fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
-        }
-        fprintf(fptr2, "\n");
-    }
-
-    fclose(fptr2);
+    // if (write_paths(num_particles, particles_list) != 0)
+    // {
+    //     printf("Error writing particles to file. \n");
+    //     exit(1);
+    // }
 
     // free matrix
+    printf("free matrix\n");
     for (int i = 0; i < n; i++)
     {
-        free(matrix[i]); // Libera la memoria della riga i-esima
+        if (matrix[i] != NULL)
+            free(matrix[i]); // Libera la memoria della riga i-esima
     }
 
-    free(matrix);
+    printf("free matrix[i]\n");
+    if (matrix != NULL)
+        free(matrix); // Libera la memoria dell'array di puntatori
 
     // free memory
-    for (unsigned int i = 0; i < num_particles; i++)
+    printf("free particles\n");
+
+    for (int i = 0; i < num_particles; i++)
     {
-        particle *p = &particles_list[i];
-        free(p->current_position);
-        free(p->path);
+        if (particles_list[i].current_position != NULL)
+            free(particles_list[i].current_position);
+        if (particles_list[i].path != NULL)
+            free(particles_list[i].path);
     }
-    free(particles_list);
+
+    printf("free particles_list\n");
+    if (particles_list != NULL)
+        free(particles_list);
+
+    fflush(stdout);
+    printf("Error occurred : %s\n", strerror(errno));
 
     return 0;
 }
