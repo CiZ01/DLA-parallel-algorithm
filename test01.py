@@ -171,9 +171,7 @@ def make_img(paths, seed):
 
     img[seed[0]][seed[1]] = (0, 0, 0)
 
-    blank = img.copy()
-
-    # 1,2,4,5,6,7
+    blank = [row[:] for row in img]
 
     for i in range(0, len(paths[0]), 2):
         for j in range(0, len(paths)):
@@ -197,7 +195,7 @@ def make_img(paths, seed):
                     img[y][x] = (255, 0, 0)
 
         images.save(img, f"imgs/matrix{i//2}.png")
-        img = blank.copy()
+        img = [row[:] for row in blank]
     return
 
 
@@ -236,19 +234,19 @@ def make_gif():
 
 
 def main():
-    for i in range(100):
+    for i in range(1):
         print("iterazione: ", i)
         seed = execute_c_program()
         print(seed)
-        #paths = get_output_paths()
-        #make_img(paths, seed)  # genera le immagini per ogni iterazione
+        paths = get_output_paths()
+        make_img(paths, seed)  # genera le immagini per ogni iterazione
         matrix = make_matrix()
         if len(matrix) != 0:
             images.save(matrix, f"./imgs/matrix_f{i}.png")
         else:
             break
 
-    #make_gif()
+    make_gif()
     print(f"tempo totale: {total_time}")
     return
 

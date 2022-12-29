@@ -33,7 +33,7 @@ int write_matrix(int n, int m, int **matrix);
 int write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part, int n, int m, int **matrix);
-void gen_particles(int num_particles, particle *particles_list, int n, int m);
+void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
 int start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix);
 int check_position(int n, int m, int **matrix, particle *p);
 
@@ -129,11 +129,11 @@ int check_position(int n, int m, int **matrix, particle *p)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
-        if (near_x > 0 && near_x < n && near_y > 0 && near_y < m)
+        if (near_x >= 0 && near_x < n && near_y >= 0 && near_y < m)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if (p->current_position->x > 0 && p->current_position->x < n && p->current_position->y > 0 && p->current_position->y < m)
+                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     p->stuck = 1;
@@ -170,7 +170,7 @@ void move(particle *p, int n, int m, int **matrix)
  * La funzione ritorna 0 se la generazione è andata a buon fine, altrimenti ritorna 1.
  * La funzione modifica la lista di particelle.
  */
-void gen_particles(int num_particles, particle *particles_list, int n, int m)
+void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
 
     if (num_particles >= n * m)
@@ -187,8 +187,15 @@ void gen_particles(int num_particles, particle *particles_list, int n, int m)
         {
             perror("Error allocating memory for current_position. \n");
         }
-        particles_list[i].current_position->x = rand() % m;
-        particles_list[i].current_position->y = rand() % n;
+        do
+        {
+            particles_list[i].current_position->x = rand() % m;
+            particles_list[i].current_position->y = rand() % n;
+        } while (seed[0] != particles_list[i].current_position->x && seed[1] != particles_list[i].current_position->y);
+        {
+            particles_list[i].current_position->x = rand() % m;
+            particles_list[i].current_position->y = rand() % n;
+        }
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
@@ -197,6 +204,7 @@ void gen_particles(int num_particles, particle *particles_list, int n, int m)
         {
             perror("Error allocating memory for paths. \n");
         }
+        particles_list[i].path[0] = *particles_list[i].current_position;
     }
 }
 
@@ -305,7 +313,7 @@ int main(int argc, char *argv[])
     }
 
     // create particles and check for errors
-    gen_particles(num_particles, particles_list, n, m);
+    gen_particles(seed, num_particles, particles_list, n, m);
 
     // print_matrix(n, m, matrix);
     // fflush(stdout);
