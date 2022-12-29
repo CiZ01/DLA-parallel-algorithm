@@ -28,27 +28,27 @@ typedef struct
 //  typedef void (*move)(particle p);
 //  typedef int (*check_position)(int  n, int m, int matrix[n][m], particle *p);
 
-void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed);
-int write_matrix(unsigned int n, unsigned int m, int **matrix);
-int write_paths(unsigned int num_particles, particle *particles_list);
-void print_matrix(unsigned int n, unsigned int m, int **matrix);
-void move(particle *part, unsigned int n, unsigned int m, int **matrix);
-int gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m);
-int start_DLA(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m, int **matrix);
-int check_position(unsigned int n, unsigned int m, int **matrix, particle *p);
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
+int write_matrix(int n, int m, int **matrix);
+int write_paths(int num_particles, particle *particles_list);
+void print_matrix(int n, int m, int **matrix);
+void move(particle *part, int n, int m, int **matrix);
+void gen_particles(int num_particles, particle *particles_list, int n, int m);
+int start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix);
+int check_position(int n, int m, int **matrix, particle *p);
 
-int write_matrix(unsigned int n, unsigned int m, int **matrix)
+int write_matrix(int n, int m, int **matrix)
 {
     FILE *fptr;
 
-    fptr = fopen("matrix.txt", "r+");
+    fptr = fopen("matrix.txt", "w+");
 
     if (fptr == NULL)
-        return 1;
+        perror("Error opening file");
 
-    for (unsigned int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
-        for (unsigned int j = 0; j < m; j++)
+        for (int j = 0; j < m; j++)
         {
             fprintf(fptr, "%d ", matrix[i][j]);
         }
@@ -62,49 +62,50 @@ int write_matrix(unsigned int n, unsigned int m, int **matrix)
     return 0;
 }
 
-int write_paths(unsigned int num_particles, particle *particles_list)
+int write_paths(int num_particles, particle *particles_list)
 {
     FILE *fptr2;
-    fptr2 = fopen("paths.txt", "w");
+    fptr2 = fopen("paths.txt", "w+");
 
     if (fptr2 == NULL)
-    {
-        return 1;
-    }
+        perror("Error opening file");
 
     for (int i = 0; i < num_particles; i++)
     {
         particle *p = &particles_list[i];
         for (int j = 0; j < ITERATIONS; j++)
         {
+
             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
         }
         fprintf(fptr2, "\n");
     }
+
+    ferror(fptr2);
 
     fclose(fptr2);
 
     return 0;
 }
 
-void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsigned int *m, unsigned int *seed)
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
 {
     // get matrix dimensions
     char *sizes = argv[1];
     char *token = strtok(sizes, ",");
-    *n = (unsigned int)atoi(token);
+    *n = (int)atoi(token);
     token = strtok(NULL, ",");
-    *m = (unsigned int)atoi(token);
+    *m = (int)atoi(token);
 
     // get seed position
     char *seed_pos = argv[2];
     token = strtok(seed_pos, ",");
-    seed[0] = (unsigned int)atoi(token);
+    seed[0] = (int)atoi(token);
     token = strtok(NULL, ",");
-    seed[1] = (unsigned int)atoi(token);
+    seed[1] = (int)atoi(token);
 
     // get number of particles
-    *num_particles = (unsigned int)atoi(argv[3]);
+    *num_particles = (int)atoi(argv[3]);
 }
 
 /*
@@ -114,7 +115,7 @@ void get_args(char *argv[], unsigned int *num_particles, unsigned int *n, unsign
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
-int check_position(unsigned int n, unsigned int m, int **matrix, particle *p)
+int check_position(int n, int m, int **matrix, particle *p)
 
 {
     if (p->stuck == 1)
@@ -124,7 +125,7 @@ int check_position(unsigned int n, unsigned int m, int **matrix, particle *p)
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
-    for (unsigned int i = 0; i < 8; i += 2)
+    for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
@@ -132,9 +133,12 @@ int check_position(unsigned int n, unsigned int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                matrix[p->current_position->y][p->current_position->x] = 1;
-                p->stuck = 1;
-                return -1;
+                if (p->current_position->x > 0 && p->current_position->x < n && p->current_position->y > 0 && p->current_position->y < m)
+                {
+                    matrix[p->current_position->y][p->current_position->x] = 1;
+                    p->stuck = 1;
+                    return -1;
+                }
             }
         }
     }
@@ -148,7 +152,7 @@ int check_position(unsigned int n, unsigned int m, int **matrix, particle *p)
  * Quest'ultima funzionalità penso sia solo a scopo di TEST.
  * La funzione non ritorna nulla.
  */
-void move(particle *p, unsigned int n, unsigned int m, int **matrix)
+void move(particle *p, int n, int m, int **matrix)
 {
 
     // move particle
@@ -166,24 +170,22 @@ void move(particle *p, unsigned int n, unsigned int m, int **matrix)
  * La funzione ritorna 0 se la generazione è andata a buon fine, altrimenti ritorna 1.
  * La funzione modifica la lista di particelle.
  */
-int gen_particles(unsigned int num_particles, particle *particles_list, unsigned int n, unsigned int m)
+void gen_particles(int num_particles, particle *particles_list, int n, int m)
 {
 
     if (num_particles >= n * m)
     {
-        printf("Too many particles for the matrix size. \n");
-        exit(1);
+        perror("Too many particles for the matrix size. \n");
     }
 
     // get data from particle_arg
     srand(time(NULL));
-    for (unsigned int i = 0; i < num_particles; i++)
+    for (int i = 0; i < num_particles; i++)
     {
         particles_list[i].current_position = malloc(sizeof(position));
         if (particles_list[i].current_position == NULL)
         {
-            printf("Error allocating memory for current_position. \n");
-            return 1;
+            perror("Error allocating memory for current_position. \n");
         }
         particles_list[i].current_position->x = rand() % m;
         particles_list[i].current_position->y = rand() % n;
@@ -193,11 +195,9 @@ int gen_particles(unsigned int num_particles, particle *particles_list, unsigned
         particles_list[i].path = malloc(sizeof(position) * ITERATIONS);
         if (particles_list[i].path == NULL)
         {
-            printf("Error allocating memory for paths. \n");
-            return 1;
+            perror("Error allocating memory for paths. \n");
         }
     }
-    return 0;
 }
 
 /*
@@ -205,9 +205,9 @@ int gen_particles(unsigned int num_particles, particle *particles_list, unsigned
  * La funzione riceve in input le dimensioni della matrice e la matrice.
  * La funzione non ritorna nulla.
  */
-void print_matrix(unsigned int n, unsigned int m, int **matrix)
+void print_matrix(int n, int m, int **matrix)
 {
-    unsigned int a, b;
+    int a, b;
     for (a = 0; a < n; a++)
     {
         for (b = 0; b < m; b++)
@@ -233,17 +233,17 @@ void print_matrix(unsigned int n, unsigned int m, int **matrix)
  * La funzione ritorna 0 se l'esecuzione è andata a buon fine, altrimenti ritorna 1.
  *
  */
-int start_DLA(unsigned int num_particles,
+int start_DLA(int num_particles,
               particle *particles_list,
-              unsigned int n, unsigned int m,
+              int n, int m,
               int **matrix)
 {
     printf("Starting DLA\n");
-    unsigned int t;
+    int t;
     srand(time(NULL));
     for (t = 1; t < ITERATIONS; t++)
     {
-        unsigned int i;
+        int i;
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -265,9 +265,9 @@ int start_DLA(unsigned int num_particles,
 int main(int argc, char *argv[])
 {
 
-    unsigned int n, m;          // matrix dimensions
-    unsigned int seed[2];       // seed position
-    unsigned int num_particles; // number of particles
+    int n, m;          // matrix dimensions
+    int seed[2];       // seed position
+    int num_particles; // number of particles
 
     get_args(argv, &num_particles, &n, &m, seed);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
@@ -278,12 +278,13 @@ int main(int argc, char *argv[])
     // seed[0] = 50;
     // seed[1] = 50;
 
+    printf("seed %d, %d\n", seed[0], seed[1]);
+
     int **matrix;
     matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
     {
-        printf("Error allocating memory");
-        return 1;
+        perror("Error allocating memory");
     }
 
     for (int i = 0; i < n; i++)
@@ -291,8 +292,7 @@ int main(int argc, char *argv[])
         matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
         {
-            printf("Error allocating memory");
-            return 1;
+            perror("Error allocating memory");
         }
     }
 
@@ -301,16 +301,11 @@ int main(int argc, char *argv[])
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
     if (particles_list == NULL)
     {
-        printf("Error allocating memory");
-        return 1;
+        perror("Error allocating memory");
     }
 
     // create particles and check for errors
-    if (gen_particles(num_particles, particles_list, n, m) != 0)
-    {
-        printf("Error generating particles. \n");
-        exit(1);
-    }
+    gen_particles(num_particles, particles_list, n, m);
 
     // print_matrix(n, m, matrix);
     // fflush(stdout);
@@ -320,17 +315,15 @@ int main(int argc, char *argv[])
     // print_matrix(n, m, matrix);
     // fflush(stdout);
 
-    // if (write_matrix(n, m, matrix) != 0)
-    // {
-    //     printf("Error writing matrix to file. \n");
-    //     exit(1);
-    // }
+    if (write_matrix(n, m, matrix) != 0)
+    {
+        perror("Error writing matrix to file. \n");
+    }
 
-    // if (write_paths(num_particles, particles_list) != 0)
-    // {
-    //     printf("Error writing particles to file. \n");
-    //     exit(1);
-    // }
+    if (write_paths(num_particles, particles_list) != 0)
+    {
+        perror("Error writing particles to file. \n");
+    }
 
     // free matrix
     printf("free matrix\n");
@@ -358,9 +351,6 @@ int main(int argc, char *argv[])
     printf("free particles_list\n");
     if (particles_list != NULL)
         free(particles_list);
-
-    fflush(stdout);
-    printf("Error occurred : %s\n", strerror(errno));
 
     return 0;
 }

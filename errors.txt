@@ -1,1 +1,0 @@
-Error in running C program: CompletedProcess(args=['./dla_single_thread', '10,10', '0,2', '50'], returncode=0)

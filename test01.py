@@ -117,17 +117,22 @@ def execute_c_program():
     #print(cmd_running)
 
     start = time.time()
-    running = subprocess.run(cmd_running,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
+    try:
+        running = subprocess.check_call(
+            cmd_running,
+            stdout=open("out.txt", "w"),
+            stderr=open("err.txt", "w"),
+        )
+    except subprocess.CalledProcessError as e:
+        running = e.returncode
     end = time.time()
+
+    print(f"Return code : {running}")
 
     global total_time
     total_time += end - start
 
-    print(running.stdout.decode('utf-8', 'replace'))
-
-    return
+    return seed
 
 
 def get_output_matrix():
@@ -142,8 +147,6 @@ def get_output_matrix():
         with open("errors.txt", "a") as f:
             f.write("Matrix is empty\n")
             return []
-    with open("matrix.txt", "w") as f:
-        pass
     return matrix
 
 
@@ -161,6 +164,7 @@ def get_output_paths():
 
 def make_img(paths, seed):
     matrix = get_output_matrix()
+
     n, m = len(matrix), len(matrix[0])
 
     img = [[(255, 255, 255) for i in range(m)] for j in range(n)]
@@ -205,6 +209,8 @@ def make_matrix():
 
     n, m = len(tmpmatrix), len(tmpmatrix[0])
 
+    print(f"n: {n} m: {m}")
+
     matrix = [[(255, 255, 255) for i in range(m)] for j in range(n)]
 
     for i in range(n):
@@ -230,16 +236,17 @@ def make_gif():
 
 
 def main():
-    for i in range(10):
+    for i in range(100):
         print("iterazione: ", i)
-        execute_c_program()
+        seed = execute_c_program()
+        print(seed)
         #paths = get_output_paths()
         #make_img(paths, seed)  # genera le immagini per ogni iterazione
-        # matrix = make_matrix()
-        # if len(matrix) != 0:
-        #     images.save(matrix, f"./imgs/matrix_f{i}.png")
-        # else:
-        #     break
+        matrix = make_matrix()
+        if len(matrix) != 0:
+            images.save(matrix, f"./imgs/matrix_f{i}.png")
+        else:
+            break
 
     #make_gif()
     print(f"tempo totale: {total_time}")
