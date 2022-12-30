@@ -21,6 +21,7 @@ typedef struct
 
     int stuck;      // 0 = not stuck, 1 = stuck
     position *path; // history path of the particle
+    int size_path;  // size of the path
 } particle;
 
 // DA IMPLEMENTARE
@@ -68,7 +69,6 @@ void write_matrix(int n, int m, int **matrix)
  * Il file di testo sarà formattato come segue:
  *  - ogni riga rappresenta un particella
  *  - ogni colonna rappresenta un iterazione
- *
  */
 void write_paths(int num_particles, particle *particles_list)
 {
@@ -80,7 +80,7 @@ void write_paths(int num_particles, particle *particles_list)
     for (int i = 0; i < num_particles; i++)
     {
         particle *p = &particles_list[i];
-        for (int j = 0; j < ITERATIONS; j++)
+        for (int j = 0; j < p->size_path; j++)
         {
             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
         }
@@ -99,7 +99,6 @@ void write_paths(int num_particles, particle *particles_list)
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
  * In caso di mancato argomento il programma termina per un segmentation fault.
  */
-
 void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
 {
     // get matrix dimensions
@@ -128,7 +127,6 @@ void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
 int check_position(int n, int m, int **matrix, particle *p)
-
 {
     if (p->stuck == 1)
     {
@@ -149,6 +147,11 @@ int check_position(int n, int m, int **matrix, particle *p)
                 {
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     p->stuck = 1;
+                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    if (p->path == NULL)
+                    {
+                        perror("Error reallocating memory");
+                     }
                     return -1;
                 }
             }
@@ -220,6 +223,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         }
         // set the first position of the path
         particles_list[i].path[0] = *particles_list[i].current_position;
+        particles_list[i].size_path = 1;
     }
 }
 
@@ -262,12 +266,11 @@ void start_DLA(int num_particles,
                int **matrix)
 {
     printf("Starting DLA\n");
-    int t;
     srand(time(NULL));
-    for (t = 1; t < ITERATIONS; t++)
+    for (int t = 1; t < ITERATIONS; t++)
     {
-        int i;
-        for (i = 0; i < num_particles; i++)
+        // Itero per particelle per ogni iterazione
+        for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
             if (p->stuck == 0)
@@ -278,6 +281,7 @@ void start_DLA(int num_particles,
                     move(p);
                 }
                 p->path[t] = *p->current_position;
+                p->size_path++;
             }
         }
     }
@@ -326,6 +330,7 @@ int main(int argc, char *argv[])
     // start DLA
     start_DLA(num_particles, particles_list, n, m, matrix);
 
+    // -----SAVE DATA----- //
     // save matrix
     write_matrix(n, m, matrix);
 

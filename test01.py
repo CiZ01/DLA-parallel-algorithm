@@ -101,16 +101,8 @@ def execute_c_program():
     DA IMPLEMENTARE:    teoricamente può anche aspettare termini e prendersi il return. 
                         per ora l'idea è che il programma C scriva su file.
     '''
-    #cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
-    # compiling
-    #compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #print_out(compiling)
+
     seed = set_seed()
-    # running
-
-    #particles_list = particle_generate(num_particles)
-
-    #print(f"input:{seed}|{particles_list}")
 
     arg = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + arg
@@ -238,15 +230,15 @@ def main():
         print("iterazione: ", i)
         seed = execute_c_program()
         print(seed)
-        paths = get_output_paths()
-        make_img(paths, seed)  # genera le immagini per ogni iterazione
+        #paths = get_output_paths()
+        #make_img(paths, seed)  # genera le immagini per ogni iterazione
         matrix = make_matrix()
         if len(matrix) != 0:
             images.save(matrix, f"./imgs/matrix_f{i}.png")
         else:
             break
 
-    make_gif()
+    #make_gif()
     print(f"tempo totale: {total_time}")
     return
 
