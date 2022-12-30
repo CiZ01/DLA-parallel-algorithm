@@ -14,8 +14,9 @@ class DLA:
         self.final_matrix = [[(255, 255, 255) for i in range(m)]
                              for j in range(n)]
         self.seed = self.set_seed()
-        self.numParticles = numParticles
         self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
+
+        self.numParticles = numParticles
 
         self.paths = ()
         pass
@@ -42,7 +43,12 @@ class DLA:
         Legge il file di output che ha scritto il programma C e genera il risultato finale.
         '''
         tmpPaths = read_paths_from_file(filename)
-        self.paths = tuple(zip(tmpPaths[::2], tmpPaths[1::2]))
+
+        paths = []
+        for row in tmpPaths:
+            paths += list(zip(row[::2], row[1::2]))
+
+        self.paths = paths
 
     def set_seed(self) -> tuple:
         '''
