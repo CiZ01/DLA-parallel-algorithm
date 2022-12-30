@@ -62,20 +62,15 @@ for arg in sys.argv:
     output_file = sys.argv[5] if len(sys.argv) > 5 else OUTPUT_FILE
 
 
-def set_seed():
+def particle_generate(num_particles: int) -> str:
     '''
-    Aggiunge il seed alla matrice.
-    Da questo seed si svilupperà il cristallo.
-    
-    Il seed viene posizionato in modo pseudo casuale.
-    
-    return: tuple(i,j) che rappresenta la posizione del seed nella matrice.
+    Genera una lista di particelle da posizionare nella matrice.
+    Le particelle sono dichiarate nel seguente modo: (i , j , v).
+        - i: riga
+        - j: colonna
+        - v: velocità
+
     '''
-    r.seed(time.time())
-    return r.randint(0, n - 1), r.randint(0, m - 1)
-
-
-def particle_generate(num_particles):
     return ', '.join({
         f"{r.randint(0, n-1)}, {r.randint(0, m-1)}, {r.randint(0, 10)}"
         for i in range(num_particles)
@@ -97,27 +92,19 @@ def execute_c_program():
     >*  num_particles: numero totale di particelle.
     >   num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
 
-    
-    DA IMPLEMENTARE:    teoricamente può anche aspettare termini e prendersi il return. 
-                        per ora l'idea è che il programma C scriva su file.
     '''
-    #cmd = f"gcc -g -Wall -o {c_file[:-2]} {c_file}"
-    # compiling
-    #compiling = subprocess.run(cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #print_out(compiling)
+
+    # Genero il seed.
     seed = set_seed()
-    # running
 
-    #particles_list = particle_generate(num_particles)
-
-    #print(f"input:{seed}|{particles_list}")
-
+    # Formatto i parametri da passare al programma C.
     arg = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + arg
-    #print(cmd_running)
 
     start = time.time()
     try:
+        # Eseguo il programma C.
+        # Se il programma termina con un errore viene lanciata un'eccezione.
         running = subprocess.check_call(
             cmd_running,
             stdout=open("out.txt", "w"),
@@ -127,7 +114,9 @@ def execute_c_program():
         running = e.returncode
     end = time.time()
 
-    print(f"Return code : {running}")
+    if running != 0:
+        print(f"Exit code {running} \n")
+        raise Exception("C program error")
 
     global total_time
     total_time += end - start
