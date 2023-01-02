@@ -11,8 +11,8 @@ class DLA:
         '''
         self.n = n
         self.m = m
-        self.final_matrix = [[(255, 255, 255) for i in range(m)]
-                             for j in range(n)]
+        self.final_matrix = [[(255, 255, 255) for _ in range(m)]
+                             for _ in range(n)]
         self.seed = self.set_seed()
         self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
 
@@ -46,7 +46,7 @@ class DLA:
 
         paths = []
         for row in tmpPaths:
-            paths += list(zip(row[::2], row[1::2]))
+            paths += [list(zip(row[::2], row[1::2]))]
 
         self.paths = paths
 
@@ -76,7 +76,7 @@ def read_matrix_from_file(filename: str) -> list:
     return matrix
 
 
-def read_paths_from_file(filename: str) -> tuple:
+def read_paths_from_file(filename: str) -> list:
     '''
     Legge il file di output e restituisce il path di tutte le particelle.
     '''
@@ -84,7 +84,7 @@ def read_paths_from_file(filename: str) -> tuple:
     paths = []
     with open(filename, "r") as f:
         for line in f:
-            paths += [int(s) for s in line.split(",")[:-1]]
+            paths += [[int(s) for s in line.split(",")[:-1]]]
     if len(paths) == 0:
         raise Exception("Paths is empty")
     return paths

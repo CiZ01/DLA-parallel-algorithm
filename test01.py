@@ -65,6 +65,47 @@ for arg in sys.argv:
 simulation = sim.DLA(n, m, num_particles)
 
 
+def create_frames():
+    paths = sorted(simulation.paths, key=lambda x: len(x), reverse=True)
+
+    n = simulation.n
+    m = simulation.m
+
+    frame = [[(255, 255, 255) for _ in range(m)] for _ in range(n)]
+    frame[simulation.seed[0]][simulation.seed[1]] = (0, 0, 0)
+
+    copy_frame = [row[:] for row in frame]
+
+    check = lambda x: x[0] < n and x[1] < m and x[0] >= 0 and x[1] >= 0
+
+    print(paths)
+
+    pair = (0, 0)
+    for iter in range(len(paths[0])):
+        for row in paths:
+            if iter < len(row) - 1 and check(row[iter]):
+                pair = row[iter]
+                frame[pair[0]][pair[1]] = (255, 0, 0)
+            elif iter == len(row) - 1 and check(row[iter]):
+                pair = row[iter]
+                frame[pair[0]][pair[1]] = (0, 0, 0)
+                copy_frame[pair[0]][pair[1]] = (0, 0, 0)
+
+        images.save(frame, f'imgs/frames/frame_{iter}.png')
+        frame = [row[:] for row in copy_frame]
+
+
+def create_animation():
+    frames = [Image.open(image) for image in glob.glob('imgs/frames/*.png')]
+    frame_one = frames[0]
+    frame_one.save("animation.gif",
+                   format="GIF",
+                   append_images=frames,
+                   save_all=True,
+                   duration=500,
+                   loop=0)
+
+
 def execute_c_program() -> int:
     '''
     Compila il programma C.
@@ -109,10 +150,26 @@ def execute_c_program() -> int:
 
 def main():
 
-    err = execute_c_program()
-    if err != 0:
-        print(f"Errore nell'esecuzione del programma C. Error code: {err}")
-        return err
+    for i in range(1):
+        err = execute_c_program()
+        if err != 0:
+            print(f"Errore nell'esecuzione del programma C. Error code: {err}")
+            return err
+
+        # Se il programma C è stato eseguito correttamente, allora posso procedere con la creazione dell'immagine.
+        # Recupero la matrice dal ile 'matrix.txt'.
+        simulation.set_matrix_from_file('matrix.txt')
+        # Creo l'immagine.
+        images.save(simulation.final_matrix, f'./imgs/matrix{i}.png')
+
+        # Mi salvo i paths di tutte le particelle
+        simulation.set_paths_from_file('paths.txt')
+
+        # Creo le immagini per la creazione dell'animazione.
+        create_frames()
+
+        # Creo l'animazione.
+        create_animation()
 
     return 0
 
