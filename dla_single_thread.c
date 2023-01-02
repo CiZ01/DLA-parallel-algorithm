@@ -151,7 +151,7 @@ int check_position(int n, int m, int **matrix, particle *p)
                     if (p->path == NULL)
                     {
                         perror("Error reallocating memory");
-                     }
+                    }
                     return -1;
                 }
             }
