@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <omp.h>
 
 #define ITERATIONS 100
 
@@ -135,6 +136,7 @@ int check_position(int n, int m, int **matrix, particle *p)
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
+    #pragma omp parallel for
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -145,6 +147,8 @@ int check_position(int n, int m, int **matrix, particle *p)
             {
                 if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
+                    #pragma omp critical
+                    {
                         matrix[p->current_position->y][p->current_position->x] = 1;
                         p->stuck = 1;
                         p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
@@ -152,6 +156,7 @@ int check_position(int n, int m, int **matrix, particle *p)
                         {
                             perror("Error reallocating memory");
                         }
+                    }
                     return -1;
                 }
             }
@@ -193,6 +198,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 
     srand(time(NULL));
 
+    #pragma omp parallel for
     for (int i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -271,6 +277,7 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
+        #pragma omp parallel for
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -284,7 +291,7 @@ void start_DLA(int num_particles,
                 p->path[t] = *p->current_position;
                 p->size_path++;
             }
-
+            #pragma omp barrier
         }
     }
     printf("Finished DLA\n");
@@ -352,7 +359,8 @@ int main(int argc, char *argv[])
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
     
-  
+    // Non sono sicuro si possa fare, DA CONTROLLARE!!
+    // #pragma omp parallel for   
     for (int i = 0; i < num_particles; i++)
     {
         if (particles_list[i].current_position != NULL)
