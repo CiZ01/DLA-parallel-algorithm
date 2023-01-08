@@ -136,7 +136,6 @@ int check_position(int n, int m, int **matrix, particle *p)
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
-    #pragma omp parallel for
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -147,15 +146,12 @@ int check_position(int n, int m, int **matrix, particle *p)
             {
                 if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
-                    #pragma omp critical
+                    matrix[p->current_position->y][p->current_position->x] = 1;
+                    p->stuck = 1;
+                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    if (p->path == NULL)
                     {
-                        matrix[p->current_position->y][p->current_position->x] = 1;
-                        p->stuck = 1;
-                        p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                        if (p->path == NULL)
-                        {
-                            perror("Error reallocating memory");
-                        }
+                        perror("Error reallocating memory");
                     }
                     return -1;
                 }
