@@ -128,21 +128,12 @@ def execute_c_program() -> int:
     >   num_threads: numero di thread da usare per il calcolo parallelo. Se non specificato viene usato il valor NUM_THREADS.
 
     '''
-<<<<<<< HEAD
-
-    seed = set_seed()
-
-    arg = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
-    cmd_running = [f"./{c_file[:-2]}"] + arg
-    #print(cmd_running)
-=======
     # recupero il seed dalla simulazione
     seed = simulation.seed
 
     # Formatto i parametri da passare al programma C.
     args = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
     cmd_running = [f"./{c_file[:-2]}"] + args
->>>>>>> newTest
 
     start = time.time()
     try:
@@ -194,26 +185,7 @@ def main():
 
     print("Tempo di esecuzione totale del programma in C:", total_time)
 
-<<<<<<< HEAD
-def main():
-    for i in range(1):
-        print("iterazione: ", i)
-        seed = execute_c_program()
-        print(seed)
-        #paths = get_output_paths()
-        #make_img(paths, seed)  # genera le immagini per ogni iterazione
-        matrix = make_matrix()
-        if len(matrix) != 0:
-            images.save(matrix, f"./imgs/matrix_f{i}.png")
-        else:
-            break
-
-    #make_gif()
-    print(f"tempo totale: {total_time}")
-    return
-=======
     return 0
->>>>>>> newTest
 
 
 if __name__ == '__main__':

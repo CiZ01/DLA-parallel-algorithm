@@ -1,12 +1,12 @@
 .vscode
 .out
-.exe
+*.exe
 .git
-out*
+*.out
 imgs
 *.jpg
 *.png
 *.gif
 matrix.txt
 __pycache__
-dla_single_thread
+
