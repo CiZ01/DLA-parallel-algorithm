@@ -4,7 +4,7 @@
 #include <time.h>
 #include <errno.h>
 
-#define ITERATIONS 100
+#define ITERATIONS 1000
 
 typedef struct
 {
@@ -145,6 +145,7 @@ int check_position(int n, int m, int **matrix, particle *p)
             {
                 if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
+<<<<<<< HEAD
                         matrix[p->current_position->y][p->current_position->x] = 1;
                         p->stuck = 1;
                         p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
@@ -152,6 +153,15 @@ int check_position(int n, int m, int **matrix, particle *p)
                         {
                             perror("Error reallocating memory");
                         }
+=======
+                    matrix[p->current_position->y][p->current_position->x] = 1;
+                    p->stuck = 1;
+                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    if (p->path == NULL)
+                    {
+                        perror("Error reallocating memory");
+                    }
+>>>>>>> newTest
                     return -1;
                 }
             }
@@ -280,9 +290,14 @@ void start_DLA(int num_particles,
                 if (isStuck == 0)
                 {
                     move(p);
+                    p->path[t] = *p->current_position;
+                    p->size_path++;
                 }
+<<<<<<< HEAD
                 p->path[t] = *p->current_position;
                 p->size_path++;
+=======
+>>>>>>> newTest
             }
 
         }

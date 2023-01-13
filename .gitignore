@@ -9,3 +9,4 @@ imgs
 *.gif
 matrix.txt
 __pycache__
+dla_single_thread
