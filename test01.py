@@ -19,25 +19,18 @@ import time
 import glob
 import images
 from PIL import Image
+import re
+import numpy as np
 
 RANDOM_SEED = time.time()  # 1629740000.0
 OUTPUT_FILE = "matrix.txt"
 NUM_THREADS = 4
 NUM_PARTICLES = 10
+parallel = False
 
 total_time = 0
 
 C_FILE = "dla_single_thread.c"
-
-
-def print_out(out: subprocess.CompletedProcess):
-    text = out.stderr.decode('utf-8', 'replace')
-    text = text.replace("warning", "\033[1;35;40mwarning\033[0m ")
-    text = text.replace("error", "\033[1;31;40merror\033[0m ")
-    print(text)
-    return
-
-
 '''
 È possibile passare i seguenti parametri:
 >*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne.
@@ -49,24 +42,32 @@ def print_out(out: subprocess.CompletedProcess):
 I paramatri evidenziati con * sono obbligatori.
 Per ora questi parametri non sono implementati come opzioni.
 '''
-for arg in sys.argv:
-    n = int(
-        sys.argv[1].split(',')
+
+argv = sys.argv
+
+# read command line options
+for s in argv:
+    if re.search('-*', s):
+        if s == '-p':
+            parallel = True
+            argv.remove(s)
+
+n = int(argv[1].split(',')
         [0])  # immagino che il primo argomento venga passato nella forma n,m
-    m = int(sys.argv[1].split(',')[1])
+m = int(argv[1].split(',')[1])
 
-    num_particles = int(sys.argv[2]) if len(sys.argv) > 2 else NUM_PARTICLES
+num_particles = int(argv[2]) if len(argv) > 2 else NUM_PARTICLES
 
-    num_threads = int(sys.argv[3]) if len(sys.argv) > 3 else NUM_THREADS
+num_threads = int(argv[3]) if len(argv) > 3 else NUM_THREADS
 
-    c_file = sys.argv[4] if len(sys.argv) > 4 else C_FILE
-    output_file = sys.argv[5] if len(sys.argv) > 5 else OUTPUT_FILE
+c_file = argv[4] if len(argv) > 4 else C_FILE
+output_file = argv[5] if len(argv) > 5 else OUTPUT_FILE
 
-simulation = sim.DLA(n, m, num_particles)
+simulation = sim.DLA(n, m, num_particles, parallel=parallel)
 
 
 def create_frames():
-    paths = sorted(simulation.paths, key=lambda x: len(x), reverse=True)
+    paths = sorted(simulation.paths, key=lambda x: len(x), reverse=False)
 
     n = simulation.n
     m = simulation.m
@@ -77,8 +78,6 @@ def create_frames():
     copy_frame = [row[:] for row in frame]
 
     check = lambda x: x[0] < n and x[1] < m and x[0] >= 0 and x[1] >= 0
-
-    print(paths)
 
     pair = (0, 0)
     for iter in range(len(paths[0])):
@@ -96,11 +95,18 @@ def create_frames():
 
 
 def create_animation():
-    frames = [Image.open(image) for image in glob.glob('imgs/frames/*.png')]
-    frame_one = frames[0]
+
+    def sort_files(filename):
+        return int(filename.split('_')[1].split('.')[0])
+
+    frames = sorted([image for image in glob.glob('imgs/frames/frame_*.png')],
+                    key=sort_files)
+
+    open_frames = [Image.open(frame) for frame in frames]
+    frame_one = open_frames[0]
     frame_one.save("animation.gif",
                    format="GIF",
-                   append_images=frames,
+                   append_images=open_frames,
                    save_all=True,
                    duration=500,
                    loop=0)
@@ -151,10 +157,14 @@ def execute_c_program() -> int:
 def main():
 
     for i in range(1):
+        print("Simulazione", i + 1)
+
         err = execute_c_program()
         if err != 0:
             print(f"Errore nell'esecuzione del programma C. Error code: {err}")
             return err
+
+        print("Simulazione terminata. \n Salvo il risultato finale.")
 
         # Se il programma C è stato eseguito correttamente, allora posso procedere con la creazione dell'immagine.
         # Recupero la matrice dal ile 'matrix.txt'.
@@ -162,14 +172,18 @@ def main():
         # Creo l'immagine.
         images.save(simulation.final_matrix, f'./imgs/matrix{i}.png')
 
+        print("Salvo i paths delle particelle.")
         # Mi salvo i paths di tutte le particelle
         simulation.set_paths_from_file('paths.txt')
 
+        print("Genero l'animazione.")
         # Creo le immagini per la creazione dell'animazione.
-        create_frames()
+        #create_frames()
 
         # Creo l'animazione.
-        create_animation()
+        #create_animation()
+
+    print("Tempo di esecuzione totale del programma in C:", total_time)
 
     return 0
 

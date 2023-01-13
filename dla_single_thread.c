@@ -4,7 +4,7 @@
 #include <time.h>
 #include <errno.h>
 
-#define ITERATIONS 100
+#define ITERATIONS 1000
 
 typedef struct
 {
