@@ -7,24 +7,28 @@ import numpy as np
 
 class DLA:
 
-    def __init__(self, n: int, m: int, numParticles: int, parallel=False):
+    def __init__(self, n: int, m: int, numParticles: int, numTests : int, numThreads : int):
         '''
         Inizializza la matrice e il seed.
         Setta il seed sulla matrice e setta il numero di particelle.
         '''
         self.n = n
         self.m = m
-        self.final_matrix = [[(255, 255, 255) for _ in range(m)]
-                             for _ in range(n)]
+        self.final_matrix = []
         self.seed = self.set_seed()
-        self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
+        #self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
 
         self.numParticles = numParticles
 
         self.paths = ()
 
-        self.isParallel = parallel
-        print("Parallel mode: " + str(self.isParallel))
+        self.numThreads = numThreads
+        self.isParallel = True if self.numThreads > 1 else False
+            
+        self.numTests = numTests
+        
+        self.elapsedTimes = set()
+        self.avgElapsedTime = 0
         pass
 
     def set_numParticles(self, numParticles: int):

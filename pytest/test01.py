@@ -6,7 +6,7 @@ In seguito il programma costruirà i suoi dati di partenza da questi valori.
 
 Il progetto consiste nello sviluppare un algoritmo multi processo in MPI e una versione implementata in Cuda
 per lo studio del Diffusion Limited Aggregation (DLA).
-Più precisamente l'algoritmo deve studiare la crescita di un cristallo posizionato in una matrice 2D, 
+Più precisamente l'algoritmo deve studiare la crescita di un cristallo posizionato in una matrice 2D,
 le particelle vengono posizionate casualmente e si muovono in modo casuale, seguono un Moto Browniano.
 '''
 
@@ -23,12 +23,14 @@ import re
 import numpy as np
 
 RANDOM_SEED = time.time()  # 1629740000.0
-OUTPUT_FILE = "matrix.txt"
+OUTPUT_FILE = "output/matrix.txt"
 NUM_THREADS = 4
 NUM_PARTICLES = 10
 parallel = False
+pthreads = False
+openMP = False
 
-total_time = 0
+total_time = []
 
 C_FILE = "dla_single_thread.c"
 '''
@@ -43,28 +45,44 @@ I paramatri evidenziati con * sono obbligatori.
 Per ora questi parametri non sono implementati come opzioni.
 '''
 
-argv = sys.argv
 
+argv = sys.argv
 # read command line options
 for s in argv:
     if re.search('-*', s):
         if s == '-p':
             parallel = True
             argv.remove(s)
+        if s[0:2] == '-t':
+            pthreads = True
+            C_FILE = "dla_pthreads.c"
+            if len(s) > 2:
+                NUM_THREADS = int(s[2:])
+            argv.remove(s)
+        if s[0:2] == '-o':
+            openMP = True
+            C_FILE = "dla_openMP.c"
+            if len(s) > 2:
+                NUM_THREADS = int(s[2:])
+            argv.remove(s)
 
-n = int(argv[1].split(',')
-        [0])  # immagino che il primo argomento venga passato nella forma n,m
-m = int(argv[1].split(',')[1])
+if len(sys.argv) > 1:
 
-num_particles = int(argv[2]) if len(argv) > 2 else NUM_PARTICLES
+    n = int(argv[1].split(',')
+            [0])  # immagino che il primo argomento venga passato nella forma n,m
+    m = int(argv[1].split(',')[1])
 
-num_threads = int(argv[3]) if len(argv) > 3 else NUM_THREADS
+    num_particles = int(argv[2]) if len(argv) > 2 else NUM_PARTICLES
 
-c_file = argv[4] if len(argv) > 4 else C_FILE
-output_file = argv[5] if len(argv) > 5 else OUTPUT_FILE
+    num_threads = int(argv[3]) if len(argv) > 3 else NUM_THREADS
 
-simulation = sim.DLA(n, m, num_particles, parallel=parallel)
+    c_file = argv[4] if len(argv) > 4 else C_FILE
+    output_file = argv[5] if len(argv) > 5 else OUTPUT_FILE
 
+    simulation = sim.DLA(n, m, num_particles, 100, 0)
+
+
+c_files = ("dla_single_thread.c", "dla_pthreads.c", "dla_openmp.c")
 
 def create_frames():
     paths = sorted(simulation.paths, key=lambda x: len(x), reverse=False)
@@ -114,12 +132,11 @@ def create_animation():
 
 def execute_c_program() -> int:
     '''
-    Compila il programma C.
     Passa i parametri al programma e lo esegue.
-    
+
     I parametri da passare sono:
     >*  n,m: dimensioni della matrice, rispettivamente numero di righe e colonne.
-    >*  particles_list: lista di particelle da posizionare nella matrice. 
+    >*  particles_list: lista di particelle da posizionare nella matrice.
         Le particelle sono dichiarate nel seguente modo: (i , j , v).
         - i: riga
         - j: colonna
@@ -133,7 +150,9 @@ def execute_c_program() -> int:
 
     # Formatto i parametri da passare al programma C.
     args = f"{n},{m}|{seed[0]},{seed[1]}|{num_particles}".split("|")
-    cmd_running = [f"./{c_file[:-2]}"] + args
+    if pthreads or openMP:
+        args += [f'{num_threads}']
+    cmd_running = [f"./{c_file[:-2]}.out"] + args
 
     start = time.time()
     try:
@@ -141,24 +160,84 @@ def execute_c_program() -> int:
         # Se il programma termina con un errore viene lanciata un'eccezione.
         running = subprocess.check_call(
             cmd_running,
-            stdout=open("out.txt", "w"),
-            stderr=open("err.txt", "w"),
+            stdout=open("output/out.txt", "w"),
+            stderr=open("output/err.txt", "w"),
         )
     except subprocess.CalledProcessError as e:
         running = e.returncode
     end = time.time()
 
     global total_time
-    total_time += end - start
+    total_time += [end - start]
 
     return running
 
 
-def main():
+def executeTests(simulation: sim.DLA) -> int:
+    n, m, num_particles, num_threads = simulation.n, simulation.m, simulation.numParticles, simulation.numThreads
 
-    for i in range(1):
+    args = f"{n},{m}|{simulation.seed[0]},{simulation.seed[1]}|{num_particles}".split(
+        "|")
+    if num_threads > 0:
+        args += [f'{num_threads}']
+        if openMP:
+            c_file = c_files[2]
+        else:
+            c_file = c_files[1]
+    else:
+        c_file = c_files[0]
+
+    cmd_running = [f"./{c_file[:-2]}.out"] + args
+
+    for t in range(simulation.numTests):
+        try:
+            # Eseguo il programma C.
+            # Se il programma termina con un errore viene lanciata un'eccezione.
+            start = time.time()
+            running = subprocess.check_call(
+                cmd_running,
+                stdout=open("output/out.txt", "w"),
+                stderr=open("output/err.txt", "w"),
+            )
+            end = time.time()
+        except subprocess.CalledProcessError as e:
+            running = e.returncode
+            return running
+
+        simulation.elapsedTimes.add(end - start)
+
+    simulation.avgElapsedTime = sum(
+        simulation.elapsedTimes) / simulation.numTests
+    return 0
+
+
+'''
+Esegue una serie di test sul programma C specificato, i parametri di configurazione sono passati come argomento.
+Il parametro settings deve essere nella forma:
+ settings = [(n,m,num_particles,numTest,num_threads),
+              (n,m,num_particles,numTest,numThreads), ...]
+'''
+
+
+def big_test(settings: list):
+    avgTimeTests = []
+    for configuration in settings:
+        simulation = sim.DLA(*configuration)
+        print(f'Simulazione con parametri: {configuration}')
+        err = executeTests(simulation)
+        if err != 0:
+            print(f"Errore nell'esecuzione del programma C. Error code: {err}")
+            return err
+
+        avgTimeTests += [simulation.avgElapsedTime]
+    return avgTimeTests
+
+
+def small_test() -> int:
+    print(C_FILE)
+    numTests = 100
+    for i in range(numTests):
         print("Simulazione", i + 1)
-
         err = execute_c_program()
         if err != 0:
             print(f"Errore nell'esecuzione del programma C. Error code: {err}")
@@ -168,13 +247,13 @@ def main():
 
         # Se il programma C è stato eseguito correttamente, allora posso procedere con la creazione dell'immagine.
         # Recupero la matrice dal ile 'matrix.txt'.
-        simulation.set_matrix_from_file('matrix.txt')
+        simulation.set_matrix_from_file('output/matrix.txt')
         # Creo l'immagine.
         images.save(simulation.final_matrix, f'./imgs/matrix{i}.png')
 
         print("Salvo i paths delle particelle.")
         # Mi salvo i paths di tutte le particelle
-        simulation.set_paths_from_file('paths.txt')
+        #simulation.set_paths_from_file('output/paths.txt')
 
         print("Genero l'animazione.")
         # Creo le immagini per la creazione dell'animazione.
@@ -183,8 +262,14 @@ def main():
         # Creo l'animazione.
         #create_animation()
 
-    print("Tempo di esecuzione totale del programma in C:", total_time)
+    return 0
 
+def main():
+    #small_test()
+    
+    configurations = [(1000, 1000, 900000, 10, 0),(1000, 1000, 900000, 10, 4),(1000, 1000, 900000, 10, 8),(1000, 1000, 900000, 10, 16)]
+    avgTimeTests = big_test(configurations)
+    print(avgTimeTests)
     return 0
 
 
