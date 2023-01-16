@@ -7,6 +7,8 @@ imgs
 *.jpg
 *.png
 *.gif
+*.txt
+paths.txt
 matrix.txt
 __pycache__
-output
+output/

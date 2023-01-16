@@ -91,14 +91,14 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
         my_particles_list[i].stuck = 0;
 
         // allocate memory for particle path
-        my_particles_list[i].path = (position* )malloc(sizeof(position) * ITERATIONS);
-        if (my_particles_list[i].path == NULL)
-        {
-            perror("Error allocating memory for paths. \n");
-        }
+        //my_particles_list[i].path = (position* )malloc(sizeof(position) * ITERATIONS);
+        //if (my_particles_list[i].path == NULL)
+        //{
+        //    perror("Error allocating memory for paths. \n");
+        //}
         // set the first position of the path
-        my_particles_list[i].path[0] = *my_particles_list[i].current_position;
-        my_particles_list[i].size_path = 1;
+        //my_particles_list[i].path[0] = *my_particles_list[i].current_position;
+        //my_particles_list[i].size_path = 1;
     }
 }
 
@@ -133,11 +133,11 @@ int check_position_parallel(int n, int m, int **matrix, particle *p)
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     pthread_mutex_unlock(&mutex);
                     p->stuck = 1;
-                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                    if (p->path == NULL)
-                    {
-                        perror("Error reallocating memory");
-                    }
+                    //p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    // if (p->path == NULL)
+                    // {
+                    //     perror("Error reallocating memory");
+                    // }
                     return -1;
                 }
             }
@@ -184,8 +184,8 @@ void *start_DLA_parallel(void *rank)
                 if (isStuck == 0)
                 {
                     move(p);
-                    p->path[t] = *p->current_position;
-                    p->size_path++;
+                    //p->path[t] = *p->current_position;
+                    //p->size_path++;
                 }
             }
 
@@ -200,8 +200,8 @@ void *start_DLA_parallel(void *rank)
     {
         if (my_particles_list[i].current_position != NULL)
             free(my_particles_list[i].current_position);
-        if (my_particles_list[i].path != NULL)
-            free(my_particles_list[i].path);
+        //if (my_particles_list[i].path != NULL)
+        //    free(my_particles_list[i].path);
     }
     if (my_particles_list != NULL)
         free(my_particles_list);
