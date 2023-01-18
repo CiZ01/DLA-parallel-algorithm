@@ -25,12 +25,7 @@ typedef struct
     int size_path;  // size of the path
 } particle;
 
-// DA IMPLEMENTARE
-//  typedef int (*start_dla)(int  n, int m, int matrix[n][m], particle *p);
-//  typedef void (*move)(particle p);
-//  typedef int (*check_position)(int  n, int m, int matrix[n][m], particle *p);
-
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count);
 void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
@@ -100,7 +95,7 @@ void write_paths(int num_particles, particle *particles_list)
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
  * In caso di mancato argomento il programma termina per un segmentation fault.
  */
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count)
 {
     // get matrix dimensions
     char *sizes = argv[1];
@@ -118,6 +113,9 @@ void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
 
     // get number of particles
     *num_particles = (int)atoi(argv[3]);
+
+    // get number of threads
+    *thread_count = (int)atoi(argv[4]);
 }
 
 /*
@@ -129,13 +127,14 @@ void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
  */
 int check_position(int n, int m, int **matrix, particle *p)
 {
+    int sstuck;
     if (p->stuck == 1)
     {
         return -1;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-
+    //#pragma omp parallel for num_threads(4)
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -144,21 +143,29 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
+                #pragma omp critical
                 {
-                    matrix[p->current_position->y][p->current_position->x] = 1;
-                    p->stuck = 1;
-                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                    if (p->path == NULL)
+                    if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                     {
-                        perror("Error reallocating memory");
+                        matrix[p->current_position->y][p->current_position->x] = 1;
+                        p->stuck = 1;
+                        p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                        if (p->path == NULL)
+                        {
+                            perror("Error reallocating memory");
+                        }
                     }
-                    return -1;
                 }
+                sstuck = -1;
             }
         }
     }
-    return 0;
+    if (p->stuck == 1)
+    {
+        return sstuck;
+    } else {
+        return 0;
+    }
 }
 
 /*
@@ -194,7 +201,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 
     srand(time(NULL));
 
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(4)
     for (int i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -273,7 +280,7 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(4)
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -287,8 +294,8 @@ void start_DLA(int num_particles,
                 p->path[t] = *p->current_position;
                 p->size_path++;
             }
-            #pragma omp barrier
         }
+        #pragma omp barrier
     }
     printf("Finished DLA\n");
 }
@@ -299,8 +306,9 @@ int main(int argc, char *argv[])
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
     int num_particles; // number of particles
+    int thread_count;
 
-    get_args(argv, &num_particles, &n, &m, seed);
+    get_args(argv, &num_particles, &n, &m, seed, &thread_count);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
     // fflush(stdout);
     // num_particles = 50;
@@ -333,8 +341,10 @@ int main(int argc, char *argv[])
     gen_particles(seed, num_particles, particles_list, n, m);
 
     // start DLA
+    time_t begin = time(NULL);
     start_DLA(num_particles, particles_list, n, m, matrix);
-
+    time_t end = time(NULL);
+    printf("il tempo impiegato per il DLA è: %ld \n", (end-begin));
     // -----SAVE DATA----- //
     // save matrix
     write_matrix(n, m, matrix);
@@ -354,9 +364,7 @@ int main(int argc, char *argv[])
     printf("matrix, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
-    
-    // Non sono sicuro si possa fare, DA CONTROLLARE!!
-    // #pragma omp parallel for   
+     
     for (int i = 0; i < num_particles; i++)
     {
         if (particles_list[i].current_position != NULL)
