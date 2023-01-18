@@ -55,7 +55,7 @@ for s in argv:
             argv.remove(s)
         if s[0:2] == '-t':
             pthreads = True
-            C_FILE = "dla_pthreads.c"
+            C_FILE = "dla_pthread.c"
             if len(s) > 2:
                 NUM_THREADS = int(s[2:])
             argv.remove(s)
@@ -79,10 +79,10 @@ if len(sys.argv) > 1:
     c_file = argv[4] if len(argv) > 4 else C_FILE
     output_file = argv[5] if len(argv) > 5 else OUTPUT_FILE
 
-    simulation = sim.DLA(n, m, num_particles, 100, 0)
+    simulation = sim.DLA(n, m, num_particles, 1000, 0)
 
 
-c_files = ("dla_single_thread.c", "dla_pthreads.c", "dla_openmp.c")
+c_files = ("dla_single_thread.c", "dla_pthread.c", "dla_openmp.c")
 
 def create_frames():
     paths = sorted(simulation.paths, key=lambda x: len(x), reverse=False)
@@ -235,7 +235,7 @@ def big_test(settings: list):
 
 def small_test() -> int:
     print(C_FILE)
-    numTests = 100
+    numTests = 1000
     for i in range(numTests):
         print("Simulazione", i + 1)
         err = execute_c_program()
@@ -267,8 +267,8 @@ def small_test() -> int:
 def main():
     #small_test()
     
-    configurations = [(1000, 1000, 900000, 10, 0),(1000, 1000, 900000, 10, 4),(1000, 1000, 900000, 10, 8),(1000, 1000, 900000, 10, 16)]
-    avgTimeTests = big_test(configurations)
+    configurations = [(10000, 10000, 9000000, 1, 4),(10000, 10000, 9000000, 1, 8),(10000, 10000, 900000, 1, 16)]
+    avgTimeTests = big_test(configurations) #più veloces
     print(avgTimeTests)
     return 0
 

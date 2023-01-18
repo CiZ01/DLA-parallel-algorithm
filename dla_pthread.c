@@ -9,19 +9,37 @@
 
 #define ITERATIONS 1000
 
+typedef struct
+{
+    int value;
+    pthread_mutex_t mutex;
+} cell;
+
 int num_threads;
 int n,m,num_particles;
 int seed[2];
-int** matrix;
+cell** matrix;
+unsigned int rand_seed;
 
-pthread_mutex_t mutex;
-pthread_mutex_t free_mutex;
+
+
 
 void *start_DLA_parallel(void* rank);
-int check_position_parallel(int n, int m, int **matrix, particle *p);
+int check_position_parallel(int n, int m, cell **matrix, particle *p);
 void gen_particles_parallel(int *seed, int my_num_particles, particle *my_particles_list, int n, int m);
 void get_args_pthreads(char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads);
+void move_parallel(particle *p);
 
+void move_parallel(particle *p)
+{
+    
+    // move particle
+    p->dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand_r(&rand_seed) % 2 * p->dire;
+
+    p->dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand_r(&rand_seed) % 2 * p->dire;
+}
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
  * In caso di mancato argomento il programma termina per un segmentation fault.
@@ -64,8 +82,6 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
     }
 
     // generate random seed
-    unsigned int rand_seed = (unsigned int)time(NULL); 
-
     for (int i = 0; i < my_num_particles; i++)
     {
         // allocate memory for particle position
@@ -81,10 +97,6 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
             my_particles_list[i].current_position->y = rand_r(&rand_seed) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == my_particles_list[i].current_position->x && seed[1] == my_particles_list[i].current_position->y);
-        {
-            my_particles_list[i].current_position->x = rand_r(&rand_seed) % m;
-            my_particles_list[i].current_position->y = rand_r(&rand_seed) % n;
-        }
 
         my_particles_list[i].vel = rand_r(&rand_seed) % 10;
         my_particles_list[i].dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
@@ -110,7 +122,7 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
-int check_position_parallel(int n, int m, int **matrix, particle *p)
+int check_position_parallel(int n, int m, cell **matrix, particle *p)
 {
     if (p->stuck == 1)
     {
@@ -125,13 +137,13 @@ int check_position_parallel(int n, int m, int **matrix, particle *p)
         int near_x = p->current_position->x + directions[i + 1];
         if (near_x >= 0 && near_x < n && near_y >= 0 && near_y < m)
         {
-            if (matrix[near_y][near_x] == 1)
+            if (matrix[near_y][near_x].value == 1)
             {
                 if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
-                    pthread_mutex_lock(&mutex);
-                    matrix[p->current_position->y][p->current_position->x] = 1;
-                    pthread_mutex_unlock(&mutex);
+                    pthread_mutex_lock(&matrix[p->current_position->y][p->current_position->x].mutex);
+                    matrix[p->current_position->y][p->current_position->x].value = 1;
+                    pthread_mutex_unlock(&matrix[p->current_position->y][p->current_position->x].mutex);
                     p->stuck = 1;
                     //p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
                     // if (p->path == NULL)
@@ -167,6 +179,7 @@ void *start_DLA_parallel(void *rank)
     printf("%d --- %d\n", (int)my_rank, my_num_particles);
     gen_particles_parallel(seed, my_num_particles, my_particles_list, n, m);
 
+    time_t start = time(NULL);
 
     printf("%d.Starting DLA\n", (int)my_rank);
     srand(42);
@@ -183,7 +196,7 @@ void *start_DLA_parallel(void *rank)
                 int isStuck = check_position_parallel(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    move(p);
+                    move_parallel(p);
                     //p->path[t] = *p->current_position;
                     //p->size_path++;
                 }
@@ -195,7 +208,6 @@ void *start_DLA_parallel(void *rank)
     // FINALIZE //
 
     // free memory
-    pthread_mutex_lock(&free_mutex);
     for (int i = 0; i < my_num_particles; i++)
     {
         if (my_particles_list[i].current_position != NULL)
@@ -205,9 +217,8 @@ void *start_DLA_parallel(void *rank)
     }
     if (my_particles_list != NULL)
         free(my_particles_list);
-    pthread_mutex_unlock(&free_mutex);
-    printf("%ld.Finished DLA\n", my_rank);
-
+    time_t end = time(NULL);
+    printf("%ld.Finished DLA -- time: %ld\n", my_rank, end - start);
     return NULL;
 }
 
@@ -225,39 +236,34 @@ int main(int argc, char *argv[])
     // m = 10;
     // seed[0] = 50;
     // seed[1] = 50;
-    int err;
 
-    printf("num_threads: %d", num_threads);
+    printf("num_threads: %d \n", num_threads);
 
-    matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    matrix = (cell**)malloc(n*sizeof(cell*)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
         perror("Error allocating memory");
 
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        matrix[i] = (cell*)malloc(m*sizeof(cell)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
             perror("Error allocating memory");
+        if (pthread_mutex_init(&matrix[i]->mutex, NULL))
+            perror("Error initializing mutex");
+        matrix[i]->value = 0;
     }
 
-    matrix[seed[0]][seed[1]] = 1; // set seed
-
-    err = pthread_mutex_init(&mutex, NULL);
-    if (err != 0)
-        perror("Error initializing mutex");
-
-    err = pthread_mutex_init(&free_mutex, NULL);
-    if (err != 0)
-        perror("Error initializing mutex");
-
+    matrix[seed[0]][seed[1]].value = 1; // set seed
 
     // create threads
     long thread;
     pthread_t* thread_handles;
-    double start, finish, elapsed;
 
     thread_handles = (pthread_t*) malloc (num_threads*sizeof(pthread_t)); 
-    start = clock();
+
+    rand_seed = (unsigned int)time(NULL); 
+
+    time_t start = time(NULL);
     // C'è il problema che ogni thread deve avere la sua matrice, quindi non posso passare la matrice come parametro
     // ma devo passare la matrice per ogni thread
     for (thread = 0; thread < num_threads; thread++)
@@ -266,23 +272,22 @@ int main(int argc, char *argv[])
     for (thread = 0; thread < num_threads; thread++)
         pthread_join(thread_handles[thread], NULL);
    
+    time_t end = time(NULL);
 
-    finish = clock();
-    elapsed = finish - start;
+    printf("Elapsed time: %f seconds \n", (double)((end - start)));
 
     //write_matrix(n, m, matrix);
     //write_particles(num_particles, my_particles_list);
 
     // -----FINALIZE----- //
 
-    pthread_mutex_destroy(&mutex);
-    pthread_mutex_destroy(&free_mutex);
 
     printf("freed memory: ");
     for (int i = 0; i < n; i++)
     {
-        if (matrix[i] != NULL)
+        if(matrix[i] != NULL){
             free(matrix[i]); // Libera la memoria della riga i-esima
+        }
     }
 
     printf("matrix, ");
@@ -293,7 +298,6 @@ int main(int argc, char *argv[])
         free(thread_handles);
     printf("thread_handles \n");
 
-    printf("Elapsed time: %f seconds", elapsed / CLOCKS_PER_SEC);
 
     return 0;
 }

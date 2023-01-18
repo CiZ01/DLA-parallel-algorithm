@@ -92,10 +92,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand() % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-        {
-            particles_list[i].current_position->x = rand() % m;
-            particles_list[i].current_position->y = rand() % n;
-        }
 
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
@@ -195,9 +191,12 @@ int main(int argc, char *argv[])
     // create particles
     gen_particles(seed, num_particles, particles_list, n, m);
 
+    time_t start = time(NULL);
     // start DLA
     start_DLA(num_particles, particles_list, n, m, matrix);
 
+    time_t end = time(NULL);
+    printf("time: %ld\n", (end - start));
     // -----SAVE DATA----- //
     // save matrix
     //write_matrix(n, m, matrix);

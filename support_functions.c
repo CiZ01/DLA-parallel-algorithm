@@ -144,3 +144,4 @@ void move(particle *p)
     p->dire = rand() % 2 == 0 ? 1 : -1;
     p->current_position->y += rand() % 2 * p->dire;
 }
+
