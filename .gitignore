@@ -1,11 +1,14 @@
 .vscode
 .out
-.exe
+*.exe
 .git
-out*
+*.out
 imgs
 *.jpg
 *.png
 *.gif
+*.txt
+paths.txt
 matrix.txt
 __pycache__
+output/
