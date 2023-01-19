@@ -6,7 +6,8 @@
 #include <omp.h>
 
 #define ITERATIONS 100
-
+unsigned int gen_rand;
+int thread_count;
 typedef struct
 {
     int x; // position on x axis
@@ -134,7 +135,7 @@ int check_position(int n, int m, int **matrix, particle *p)
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    //#pragma omp parallel for num_threads(4)
+    #pragma omp parallel for num_threads(thread_count)
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -143,10 +144,9 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                #pragma omp critical
-                {
                     if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                     {
+                        #pragma omp atomic write
                         matrix[p->current_position->y][p->current_position->x] = 1;
                         p->stuck = 1;
                         p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
@@ -154,7 +154,6 @@ int check_position(int n, int m, int **matrix, particle *p)
                         {
                             perror("Error reallocating memory");
                         }
-                    }
                 }
                 sstuck = -1;
             }
@@ -177,11 +176,11 @@ void move(particle *p)
 {
 
     // move particle
-    p->dire = rand() % 2 == 0 ? 1 : -1;
-    p->current_position->x += rand() % 2 * p->dire;
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
 
-    p->dire = rand() % 2 == 0 ? 1 : -1;
-    p->current_position->y += rand() % 2 * p->dire;
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
 }
 
 /*
@@ -199,9 +198,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         perror("Too many particles for the matrix size. \n");
     }
 
-    srand(time(NULL));
-
-    #pragma omp parallel for num_threads(4)
+    #pragma omp parallel for num_threads(thread_count) shared(gen_rand)
     for (int i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -212,17 +209,17 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         }
         do
         {
-            particles_list[i].current_position->x = rand() % m;
-            particles_list[i].current_position->y = rand() % n;
+            particles_list[i].current_position->x = rand_r(&gen_rand) % m;
+            particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
         {
-            particles_list[i].current_position->x = rand() % m;
-            particles_list[i].current_position->y = rand() % n;
+            particles_list[i].current_position->x = rand_r(&gen_rand) % m;
+            particles_list[i].current_position->y = rand_r(&gen_rand) % n;
         }
 
-        particles_list[i].vel = rand() % 10;
-        particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
+        particles_list[i].vel = rand_r(&gen_rand) % 10;
+        particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
 
         // allocate memory for particle path
@@ -276,11 +273,10 @@ void start_DLA(int num_particles,
                int **matrix)
 {
     printf("Starting DLA\n");
-    srand(time(NULL));
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
-        #pragma omp parallel for num_threads(4)
+        #pragma omp parallel for num_threads(thread_count)
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -306,7 +302,7 @@ int main(int argc, char *argv[])
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
     int num_particles; // number of particles
-    int thread_count;
+    gen_rand = 856;
 
     get_args(argv, &num_particles, &n, &m, seed, &thread_count);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
