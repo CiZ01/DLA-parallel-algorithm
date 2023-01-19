@@ -3,60 +3,49 @@
 #include <string.h>
 #include <pthread.h>
 
+typedef struct{
+    int value;
+    pthread_mutex_t mutex;
+} cell;
 
-
-void *hello(void* rank);
 typedef struct{
     int x;
-}pippo;
-
-typedef struct{
-    pippo *a;
-} position;
+    int y;
+} particle;
 
 
-position* list;
+int main(int argc, char *argv[]){
+    int n = 10;
+    int m = 10;
 
-
-int main(){
-
-    pthread_t *threads;
-    int num_threads = 4;
-    threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
-    list = (position*)malloc(10*sizeof(position));
-
-    for (int i=0; i<10; i++){
-        position *p;
-        p = (position*)malloc(sizeof(position));
-        p->a = (pippo*)malloc(sizeof(pippo));
-        p->a->x = i;
-
-        list[i] = *p;
+    cell **matrix = (cell**)malloc(n*sizeof(cell*)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    if (matrix == NULL)
+        perror("Error allocating memory");
+    for(int i = 0; i < n; i++){
+        matrix[i] = (cell*)malloc(m*sizeof(cell)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        if (matrix[i] == NULL)
+            perror("Error allocating memory");
+        if (pthread_mutex_init(&matrix[i]->mutex, NULL))
+            perror("Error initializing mutex");
+        matrix[i]->value = 0;
     }
+    particle p = {3, 2};
+
+    particle* c = &p;
+
+    matrix[c->x][c->y].value = 1; // set seed
 
 
-    for(long i =0; i<num_threads; i++){
-        pthread_create(&threads[i], NULL, hello, (void*)i);
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < m; j++){
+            printf("%d ", matrix[i][j].value);
+        }
+        printf("\n");
     }
-
-    for(int i=0; i<num_threads; i++){
-        pthread_join(threads[i], NULL);
+    for(int i = 0; i < n; i++){
+        pthread_mutex_destroy(&matrix[i]->mutex);
+        free(matrix[i]);
     }
-
-    free(threads);
-    free(list);
-
-
+    free(matrix);
     return 0;
-
-}
-
-void *hello(void* rank){
-    long my_rank = (long)rank;
-
-    position a = list[my_rank];
-
-    printf("Hello from thread %ld, x: %d \n", my_rank, a.a->x);
-
-    return NULL;
 }
