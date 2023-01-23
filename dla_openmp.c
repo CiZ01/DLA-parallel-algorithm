@@ -192,14 +192,13 @@ void move(particle *p)
  */
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
-
     if (num_particles >= n * m)
     {
         perror("Too many particles for the matrix size. \n");
     }
-
-    #pragma omp parallel for num_threads(thread_count) shared(gen_rand)
-    for (int i = 0; i < num_particles; i++)
+    int i = 0;
+    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list) private(i)
+    for (i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
         particles_list[i].current_position = malloc(sizeof(position));
@@ -273,7 +272,7 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
-        #pragma omp parallel for num_threads(thread_count)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list) private(i)
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
