@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-int gen_rand = 586;
+unsigned gen_rand = 586;
 
 typedef struct
 {
