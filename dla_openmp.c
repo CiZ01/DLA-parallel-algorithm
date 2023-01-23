@@ -272,7 +272,7 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list) private(i)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix) private(i)
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
