@@ -76,8 +76,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         perror("Too many particles for the matrix size. \n");
     }
 
-    srand(42);
-
     for (int i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -129,7 +127,6 @@ void start_DLA(int num_particles,
                int **matrix)
 {
     printf("Starting DLA\n");
-    srand(time(NULL));
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
@@ -188,6 +185,7 @@ int main(int argc, char *argv[])
     if (particles_list == NULL)
         perror("Error allocating memory");
 
+    srand(856); // set seed for random
     // create particles
     gen_particles(seed, num_particles, particles_list, n, m);
 
@@ -199,7 +197,7 @@ int main(int argc, char *argv[])
     printf("time: %ld\n", (end - start));
     // -----SAVE DATA----- //
     // save matrix
-    //write_matrix(n, m, matrix);
+    write_matrix(n, m, matrix);
 
     // save paths
     //write_paths(num_particles, particles_list);

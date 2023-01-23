@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <pthread.h>
 
 
 typedef struct
@@ -22,6 +23,12 @@ typedef struct
     position *path; // history path of the particle
     int size_path;  // size of the path
 } particle;
+
+typedef struct
+{
+    int value;
+    pthread_mutex_t mutex;
+} cell;
 
 void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
 void write_matrix(int n, int m, int **matrix);
@@ -145,3 +152,27 @@ void move(particle *p)
     p->current_position->y += rand() % 2 * p->dire;
 }
 
+void write_matrix_cell(int n, int m, cell **matrix)
+{
+    FILE *fptr;
+
+    fptr = fopen("output/matrix.txt", "w+");
+    if (fptr == NULL)
+        perror("Error opening file");
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < m; j++)
+        {
+            fprintf(fptr, "%d ", matrix[i][j].value);
+        }
+        fprintf(fptr, "\n");
+    }
+
+    if (ferror(fptr))
+        perror("Error writing file");
+
+    // close file
+    if (fclose(fptr))
+        perror("Error closing file");
+}

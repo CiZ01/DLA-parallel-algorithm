@@ -14,9 +14,10 @@ class DLA:
         '''
         self.n = n
         self.m = m
-        self.final_matrix = []
+        self.final_matrix = [[(255, 255, 255) for _ in range(m)] for _ in range(n)]
         self.seed = self.set_seed()
-        #self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
+        self.final_matrix[self.seed[0]][self.seed[1]] = (0, 0, 0)
+        
 
         self.numParticles = numParticles
 

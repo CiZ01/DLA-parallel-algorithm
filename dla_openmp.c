@@ -39,7 +39,7 @@ void write_matrix(int n, int m, int **matrix)
 {
     FILE *fptr;
 
-    fptr = fopen("matrix.txt", "w+");
+    fptr = fopen("output/matrix.txt", "w+");
     if (fptr == NULL)
         perror("Error opening file");
 
@@ -213,10 +213,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-        {
-            particles_list[i].current_position->x = rand_r(&gen_rand) % m;
-            particles_list[i].current_position->y = rand_r(&gen_rand) % n;
-        }
 
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;

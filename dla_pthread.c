@@ -5,21 +5,18 @@
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
-#include "support_functions.c"
+#include "render_image.c"
 
 #define ITERATIONS 1000
 
-typedef struct
-{
-    int value;
-    pthread_mutex_t mutex;
-} cell;
+
 
 int num_threads;
 int n,m,num_particles;
 int seed[2];
 cell** matrix;
 unsigned int rand_seed;
+pthread_barrier_t barrier;
 
 
 
@@ -166,23 +163,20 @@ void *start_DLA_parallel(void *rank)
     {
         my_num_particles += num_particles % num_threads;
     }
-
-
-
+    
     // create particles
-
     particle*  my_particles_list = (particle *)malloc(sizeof(particle) * my_num_particles);
     if (my_particles_list == NULL)
     {
         perror("Error allocating memory for particles. \n");
     }
+
     printf("%d --- %d\n", (int)my_rank, my_num_particles);
     gen_particles_parallel(seed, my_num_particles, my_particles_list, n, m);
 
-    time_t start = time(NULL);
 
     printf("%d.Starting DLA\n", (int)my_rank);
-    srand(42);
+
 
     for (int t = 1; t < ITERATIONS; t++)
     {
@@ -201,10 +195,12 @@ void *start_DLA_parallel(void *rank)
                     //p->size_path++;
                 }
             }
-
         }
+        // BARRIER
+        pthread_barrier_wait(&barrier);
+        // BARRIER
     }
-
+    createImage(m, n, matrix);
     // FINALIZE //
 
     // free memory
@@ -217,8 +213,7 @@ void *start_DLA_parallel(void *rank)
     }
     if (my_particles_list != NULL)
         free(my_particles_list);
-    time_t end = time(NULL);
-    printf("%ld.Finished DLA -- time: %ld\n", my_rank, end - start);
+    printf("%ld.Finished DLA \n", my_rank);
     return NULL;
 }
 
@@ -258,10 +253,11 @@ int main(int argc, char *argv[])
     // create threads
     long thread;
     pthread_t* thread_handles;
+    pthread_barrier_init(&barrier, NULL, num_threads);
 
     thread_handles = (pthread_t*) malloc (num_threads*sizeof(pthread_t)); 
 
-    rand_seed = (unsigned int)time(NULL); 
+    rand_seed = (unsigned int)856;
 
     time_t start = time(NULL);
     // C'è il problema che ogni thread deve avere la sua matrice, quindi non posso passare la matrice come parametro
@@ -276,8 +272,10 @@ int main(int argc, char *argv[])
 
     printf("Elapsed time: %f seconds \n", (double)((end - start)));
 
-    //write_matrix(n, m, matrix);
+    //write_matrix_cell(n, m, matrix);
     //write_particles(num_particles, my_particles_list);
+
+
 
     // -----FINALIZE----- //
 

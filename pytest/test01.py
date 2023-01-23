@@ -4,7 +4,7 @@ Questo script produce dei test per il progetto 5 di Sistemi Embedded e Multicore
 Più che dei test produce dei valori da passare al programma scritto in C.
 In seguito il programma costruirà i suoi dati di partenza da questi valori.
 
-Il progetto consiste nello sviluppare un algoritmo multi processo in MPI e una versione implementata in Cuda
+Il progetto consiste nello sviluppare un algoritmo multi processo in OpenMP e una versione implementata utilizzando Pthread.
 per lo studio del Diffusion Limited Aggregation (DLA).
 Più precisamente l'algoritmo deve studiare la crescita di un cristallo posizionato in una matrice 2D,
 le particelle vengono posizionate casualmente e si muovono in modo casuale, seguono un Moto Browniano.
@@ -50,10 +50,7 @@ argv = sys.argv
 # read command line options
 for s in argv:
     if re.search('-*', s):
-        if s == '-p':
-            parallel = True
-            argv.remove(s)
-        if s[0:2] == '-t':
+        if s[0:2] == '-p':
             pthreads = True
             C_FILE = "dla_pthread.c"
             if len(s) > 2:
@@ -61,7 +58,7 @@ for s in argv:
             argv.remove(s)
         if s[0:2] == '-o':
             openMP = True
-            C_FILE = "dla_openMP.c"
+            C_FILE = "dla_openmp.c"
             if len(s) > 2:
                 NUM_THREADS = int(s[2:])
             argv.remove(s)
@@ -235,7 +232,7 @@ def big_test(settings: list):
 
 def small_test() -> int:
     print(C_FILE)
-    numTests = 1000
+    numTests = 1
     for i in range(numTests):
         print("Simulazione", i + 1)
         err = execute_c_program()
@@ -249,13 +246,13 @@ def small_test() -> int:
         # Recupero la matrice dal ile 'matrix.txt'.
         simulation.set_matrix_from_file('output/matrix.txt')
         # Creo l'immagine.
-        images.save(simulation.final_matrix, f'./imgs/matrix{i}.png')
+        images.save(simulation.final_matrix, f'./imgs/matrix_final{i}.png')
 
-        print("Salvo i paths delle particelle.")
+        #print("Salvo i paths delle particelle.")
         # Mi salvo i paths di tutte le particelle
         #simulation.set_paths_from_file('output/paths.txt')
 
-        print("Genero l'animazione.")
+        #print("Genero l'animazione.")
         # Creo le immagini per la creazione dell'animazione.
         #create_frames()
 
@@ -265,11 +262,11 @@ def small_test() -> int:
     return 0
 
 def main():
-    #small_test()
+    small_test()
     
     configurations = [(10000, 10000, 9000000, 1, 4),(10000, 10000, 9000000, 1, 8),(10000, 10000, 900000, 1, 16)]
-    avgTimeTests = big_test(configurations) #più veloces
-    print(avgTimeTests)
+    #avgTimeTests = big_test(configurations) #più veloces
+    #print(avgTimeTests)
     return 0
 
 
