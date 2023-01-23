@@ -33,6 +33,7 @@ typedef struct
 } cell;
 
 void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count);
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
 void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
@@ -122,6 +123,27 @@ void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *se
     // get number of threads
     *thread_count = (int)atoi(argv[4]);
 }
+
+void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
+{
+    // get matrix dimensions
+    char *sizes = argv[1];
+    char *token = strtok(sizes, ",");
+    *n = (int)atoi(token);
+    token = strtok(NULL, ",");
+    *m = (int)atoi(token);
+
+    // get seed position
+    char *seed_pos = argv[2];
+    token = strtok(seed_pos, ",");
+    seed[0] = (int)atoi(token);
+    token = strtok(NULL, ",");
+    seed[1] = (int)atoi(token);
+
+    // get number of particles
+    *num_particles = (int)atoi(argv[3]);
+}
+
 
 /*
  * print_matrix stampa la matrice.

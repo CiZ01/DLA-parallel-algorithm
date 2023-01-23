@@ -8,6 +8,7 @@ imgs
 *.png
 *.gif
 *.txt
+*.webp
 paths.txt
 matrix.txt
 __pycache__
