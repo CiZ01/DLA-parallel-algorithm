@@ -4,120 +4,14 @@
 #include <time.h>
 #include <errno.h>
 #include <omp.h>
+#include "support_functions.c"
 
 #define ITERATIONS 100
+
 unsigned int gen_rand;
+
 int thread_count;
-typedef struct
-{
-    int x; // position on x axis
-    int y; // position on y axis
-} position;
 
-typedef struct
-{
-    position *current_position;
-
-    int vel;  // velocity
-    int dire; // direction
-
-    int stuck;      // 0 = not stuck, 1 = stuck
-    position *path; // history path of the particle
-    int size_path;  // size of the path
-} particle;
-
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count);
-void write_matrix(int n, int m, int **matrix);
-void write_paths(int num_particles, particle *particles_list);
-void print_matrix(int n, int m, int **matrix);
-void move(particle *part);
-void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
-void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix);
-int check_position(int n, int m, int **matrix, particle *p);
-
-void write_matrix(int n, int m, int **matrix)
-{
-    FILE *fptr;
-
-    fptr = fopen("output/matrix.txt", "w+");
-    if (fptr == NULL)
-        perror("Error opening file");
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < m; j++)
-        {
-            fprintf(fptr, "%d ", matrix[i][j]);
-        }
-        fprintf(fptr, "\n");
-    }
-
-    if (ferror(fptr))
-        perror("Error writing file");
-
-    // close file
-    if (fclose(fptr))
-        perror("Error closing file");
-}
-
-/*
- * Prende in input il numero di particelle e la lista di particelle.
- * Salva su un file di testo tutti i percorsi delle particelle.
- * Il file di testo sarà formattato come segue:
- *  - ogni riga rappresenta un particella
- *  - ogni colonna rappresenta un iterazione
- */
-void write_paths(int num_particles, particle *particles_list)
-{
-    FILE *fptr2;
-    fptr2 = fopen("paths.txt", "w+");
-    if (fptr2 == NULL)
-        perror("Error opening file");
-
-    for (int i = 0; i < num_particles; i++)
-    {
-        particle *p = &particles_list[i];
-        for (int j = 0; j < p->size_path; j++)
-        {
-            fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
-        }
-        fprintf(fptr2, "\n");
-    }
-
-    if (ferror(fptr2))
-        perror("Error writing file");
-
-    // close file
-    if (fclose(fptr2))
-        perror("Error closing file");
-}
-
-/*
- * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
- * In caso di mancato argomento il programma termina per un segmentation fault.
- */
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count)
-{
-    // get matrix dimensions
-    char *sizes = argv[1];
-    char *token = strtok(sizes, ",");
-    *n = (int)atoi(token);
-    token = strtok(NULL, ",");
-    *m = (int)atoi(token);
-
-    // get seed position
-    char *seed_pos = argv[2];
-    token = strtok(seed_pos, ",");
-    seed[0] = (int)atoi(token);
-    token = strtok(NULL, ",");
-    seed[1] = (int)atoi(token);
-
-    // get number of particles
-    *num_particles = (int)atoi(argv[3]);
-
-    // get number of threads
-    *thread_count = (int)atoi(argv[4]);
-}
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -167,21 +61,6 @@ int check_position(int n, int m, int **matrix, particle *p)
     }
 }
 
-/*
- * move muove la particella in una direzione pseudocasuale.
- * La funzione riceve in input la particella interessata.
- * La funzione non ritorna nulla.
- */
-void move(particle *p)
-{
-
-    // move particle
-    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
-    p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
-
-    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
-    p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
-}
 
 /*
  * gen_particles genera una lista di particelle con posizione casuale.
@@ -212,7 +91,10 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 92b634eda54ba3fb2a29db50089f2ea3605fd0d9
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
@@ -229,24 +111,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
     }
 }
 
-/*
- * print_matrix stampa la matrice.
- * La funzione riceve in input le dimensioni della matrice e la matrice.
- * La funzione non ritorna nulla.
- */
-void print_matrix(int n, int m, int **matrix)
-{
-    int a, b;
-    for (a = 0; a < n; a++)
-    {
-        for (b = 0; b < m; b++)
-        {
-            printf("%d ", matrix[a][b]);
-        }
-        printf("\n");
-    }
-    printf("-----------------------------------------------------\n");
-}
 
 /*
  * start_DLA simula l'algoritmo DLA.
@@ -281,7 +145,7 @@ void start_DLA(int num_particles,
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    move(p);
+                    move_parallel(p);
                 }
                 p->path[t] = *p->current_position;
                 p->size_path++;
@@ -300,7 +164,7 @@ int main(int argc, char *argv[])
     int num_particles; // number of particles
     gen_rand = 856;
 
-    get_args(argv, &num_particles, &n, &m, seed, &thread_count);
+    get_args_parallel(argv, &num_particles, &n, &m, seed, &thread_count);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
     // fflush(stdout);
     // num_particles = 50;
@@ -342,7 +206,7 @@ int main(int argc, char *argv[])
     write_matrix(n, m, matrix);
 
     // save paths
-    write_paths(num_particles, particles_list);
+    //write_paths(num_particles, particles_list);
 
     // -----FINALIZE----- //
 

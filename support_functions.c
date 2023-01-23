@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <pthread.h>
 
+unsigned gen_rand = 586;
 
 typedef struct
 {
@@ -31,11 +32,12 @@ typedef struct
     pthread_mutex_t mutex;
 } cell;
 
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
+void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count);
 void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part);
+void move_parallel(particle *part);
 
 void write_matrix(int n, int m, int **matrix)
 {
@@ -98,7 +100,7 @@ void write_paths(int num_particles, particle *particles_list)
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
  * In caso di mancato argomento il programma termina per un segmentation fault.
  */
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
+void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count)
 {
     // get matrix dimensions
     char *sizes = argv[1];
@@ -116,6 +118,9 @@ void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
 
     // get number of particles
     *num_particles = (int)atoi(argv[3]);
+
+    // get number of threads
+    *thread_count = (int)atoi(argv[4]);
 }
 
 /*
@@ -151,6 +156,17 @@ void move(particle *p)
 
     p->dire = rand() % 2 == 0 ? 1 : -1;
     p->current_position->y += rand() % 2 * p->dire;
+}
+
+void move_parallel(particle *p)
+{
+
+    // move particle
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
+
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
 }
 
 void write_matrix_cell(int n, int m, cell **matrix)
