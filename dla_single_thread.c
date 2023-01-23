@@ -197,10 +197,13 @@ int main(int argc, char *argv[])
     printf("time: %ld\n", (end - start));
     // -----SAVE DATA----- //
     // save matrix
-    write_matrix(n, m, matrix);
+    //write_matrix(n, m, matrix);
 
     // save paths
     //write_paths(num_particles, particles_list);
+    gdImagePtr img = gdImageCreate(m, n); 
+    createImage_intMatrix(img, n, m, matrix);
+    saveImage(img, "matrix_single_thread.png");
 
     // -----FINALIZE----- //
 

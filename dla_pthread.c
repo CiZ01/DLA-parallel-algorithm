@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
-#include "render_image.c"
+#include "support_functions.c"
 
 #define ITERATIONS 1000
 
@@ -17,6 +17,7 @@ int seed[2];
 cell** matrix;
 unsigned int rand_seed;
 pthread_barrier_t barrier;
+gdImagePtr p_img;
 
 
 
@@ -98,16 +99,6 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
         my_particles_list[i].vel = rand_r(&rand_seed) % 10;
         my_particles_list[i].dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
         my_particles_list[i].stuck = 0;
-
-        // allocate memory for particle path
-        //my_particles_list[i].path = (position* )malloc(sizeof(position) * ITERATIONS);
-        //if (my_particles_list[i].path == NULL)
-        //{
-        //    perror("Error allocating memory for paths. \n");
-        //}
-        // set the first position of the path
-        //my_particles_list[i].path[0] = *my_particles_list[i].current_position;
-        //my_particles_list[i].size_path = 1;
     }
 }
 
@@ -200,7 +191,12 @@ void *start_DLA_parallel(void *rank)
         pthread_barrier_wait(&barrier);
         // BARRIER
     }
-    createImage(m, n, matrix);
+    time_t start_img = time(NULL);
+    createImage(p_img, m, n, matrix);
+    time_t end_img = time(NULL);
+
+
+    printf("%d. Image created in %ld seconds\n", (int)my_rank, end_img - start_img);
     // FINALIZE //
 
     // free memory
@@ -259,6 +255,8 @@ int main(int argc, char *argv[])
 
     rand_seed = (unsigned int)856;
 
+    p_img = gdImageCreate(m, n);
+
     time_t start = time(NULL);
     // C'è il problema che ogni thread deve avere la sua matrice, quindi non posso passare la matrice come parametro
     // ma devo passare la matrice per ogni thread
@@ -275,7 +273,7 @@ int main(int argc, char *argv[])
     //write_matrix_cell(n, m, matrix);
     //write_particles(num_particles, my_particles_list);
 
-
+    saveImage(p_img, "test.png");
 
     // -----FINALIZE----- //
 

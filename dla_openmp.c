@@ -212,10 +212,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-<<<<<<< HEAD
-=======
-
->>>>>>> d46e1b04dbd2a119468e36154619334422fa37b1
 
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
@@ -275,8 +271,9 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
+        int i;
         #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix) private(i)
-        for (int i = 0; i < num_particles; i++)
+        for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
             if (p->stuck == 0)

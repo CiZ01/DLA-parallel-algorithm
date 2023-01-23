@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <gd.h>
 #include <errno.h>
 #include <pthread.h>
 
@@ -175,4 +176,41 @@ void write_matrix_cell(int n, int m, cell **matrix)
     // close file
     if (fclose(fptr))
         perror("Error closing file");
+}
+
+void createImage_intMatrix(gdImagePtr img, int width, int height, int** matrix) {
+    printf("Creating image...\n");
+    int black = gdImageColorAllocate(img, 0, 0, 0);
+    int white = gdImageColorAllocate(img, 255, 255, 255);
+
+    for (int y = 0; y<height; y++) {
+        for (int x = 0; x < width; x++) {
+            int color = matrix[y][x] == 0 ? white : black;
+            gdImageSetPixel(img, x, y, color);
+        }
+    }
+}
+
+void createImage(gdImagePtr img, int width, int height, cell** matrix) {
+    printf("Creating image...\n");
+    int black = gdImageColorAllocate(img, 0, 0, 0);
+    int white = gdImageColorAllocate(img, 255, 255, 255);
+
+    for (int y = 0; y<height; y++) {
+        for (int x = 0; x < width; x++) {
+            int color = matrix[y][x].value == 0 ? white : black;
+            gdImageSetPixel(img, x, y, color);
+        }
+    }
+}
+
+void saveImage(gdImagePtr img, char* filename){
+    // Salva l'immagine
+    FILE *out = fopen(filename, "wb");
+    gdImageBmp(img, out, -1);
+    fclose(out);
+
+    // Liberare la memoria
+    gdImageDestroy(img);
+
 }
