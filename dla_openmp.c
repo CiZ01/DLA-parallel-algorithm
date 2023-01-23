@@ -4,10 +4,14 @@
 #include <time.h>
 #include <errno.h>
 #include <omp.h>
+#include "support_functions.c"
 
 #define ITERATIONS 100
+
 unsigned int gen_rand;
+
 int thread_count;
+
 typedef struct
 {
     int x; // position on x axis
@@ -92,32 +96,6 @@ void write_paths(int num_particles, particle *particles_list)
         perror("Error closing file");
 }
 
-/*
- * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
- * In caso di mancato argomento il programma termina per un segmentation fault.
- */
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count)
-{
-    // get matrix dimensions
-    char *sizes = argv[1];
-    char *token = strtok(sizes, ",");
-    *n = (int)atoi(token);
-    token = strtok(NULL, ",");
-    *m = (int)atoi(token);
-
-    // get seed position
-    char *seed_pos = argv[2];
-    token = strtok(seed_pos, ",");
-    seed[0] = (int)atoi(token);
-    token = strtok(NULL, ",");
-    seed[1] = (int)atoi(token);
-
-    // get number of particles
-    *num_particles = (int)atoi(argv[3]);
-
-    // get number of threads
-    *thread_count = (int)atoi(argv[4]);
-}
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -172,7 +150,7 @@ int check_position(int n, int m, int **matrix, particle *p)
  * La funzione riceve in input la particella interessata.
  * La funzione non ritorna nulla.
  */
-void move(particle *p)
+void move_parallel(particle *p)
 {
 
     // move particle
@@ -212,11 +190,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-<<<<<<< HEAD
-=======
-
->>>>>>> d46e1b04dbd2a119468e36154619334422fa37b1
-
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
@@ -275,8 +248,9 @@ void start_DLA(int num_particles,
     for (int t = 1; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
+        int i;
         #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix) private(i)
-        for (int i = 0; i < num_particles; i++)
+        for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
             if (p->stuck == 0)
@@ -284,7 +258,7 @@ void start_DLA(int num_particles,
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    move(p);
+                    move_parallel(p);
                 }
                 p->path[t] = *p->current_position;
                 p->size_path++;
@@ -345,7 +319,7 @@ int main(int argc, char *argv[])
     write_matrix(n, m, matrix);
 
     // save paths
-    write_paths(num_particles, particles_list);
+    //write_paths(num_particles, particles_list);
 
     // -----FINALIZE----- //
 
