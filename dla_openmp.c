@@ -6,6 +6,8 @@
 #include <omp.h>
 #include "support_functions.c"
 
+gdImagePtr img;
+
 #define ITERATIONS 100
 
 unsigned int gen_rand;
@@ -91,10 +93,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-<<<<<<< HEAD
-
-=======
->>>>>>> 92b634eda54ba3fb2a29db50089f2ea3605fd0d9
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
@@ -172,7 +170,7 @@ int main(int argc, char *argv[])
     // m = 10;
     // seed[0] = 50;
     // seed[1] = 50;
-
+    img = gdImageCreate(m, n);
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     int **matrix;
@@ -207,7 +205,8 @@ int main(int argc, char *argv[])
 
     // save paths
     //write_paths(num_particles, particles_list);
-
+    createImage_intMatrix(img, n, m, matrix);
+    saveImage(img, "final_img.webp");
     // -----FINALIZE----- //
 
     printf("freed memory: ");
