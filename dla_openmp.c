@@ -41,18 +41,16 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                printf("particella alla posizione: %d,%d \n", p->current_position->x, p->current_position->y);
-                    if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
+                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
+                {
+                    #pragma omp atomic write
+                    matrix[p->current_position->y][p->current_position->x] = 1;
+                    p->stuck = 1;
+                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    if (p->path == NULL)
                     {
-                        printf("particella alla posizione: %d,%d. sono dentro!!! \n", p->current_position->x, p->current_position->y);
-                        #pragma omp atomic write
-                        matrix[p->current_position->y][p->current_position->x] = 1;
-                        p->stuck = 1;
-                        p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                        if (p->path == NULL)
-                        {
-                            perror("Error reallocating memory");
-                        }
+                        perror("Error reallocating memory");
+                    }
                 }
                 sstuck = -1;
             }
