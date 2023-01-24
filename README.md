@@ -27,7 +27,7 @@ Per avviare la versione single thread basta eseguire il seguente comando e setta
 
 Per le versioni multi thread:
 
- - OpenMP - `./dla_openmp.out n,m num_particles x,y num_threads`
+ - OpenMP - `./dla_openmp.out n,m x,y num_particles num_threads`
  - pthread - `./dla_pthread.out n,m num_particles x,y num_threads` \
  In tutti e due i casi _num_threads_ sta per il numero di threads che si vuole [***opzionale***] \
  Se non specificato il valore di default è 4.
