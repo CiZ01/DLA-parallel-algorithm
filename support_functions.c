@@ -274,6 +274,6 @@ void createImage(gdImagePtr img, int width, int height, cell** matrix, char* fil
 void saveImage(gdImagePtr img, char* filename){
     // Salva l'immagine
     FILE *out = fopen(filename, "wb");
-    gdImageBmp(img, out, -1);
+    gdImageJpeg(img, out, -1);
     fclose(out);
 }
