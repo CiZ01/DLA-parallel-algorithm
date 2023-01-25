@@ -8,7 +8,7 @@
 
 gdImagePtr img;
 
-#define ITERATIONS 100
+#define ITERATIONS 1000
 
 unsigned int gen_rand;
 
@@ -46,11 +46,6 @@ int check_position(int n, int m, int **matrix, particle *p)
                     #pragma omp atomic write
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     p->stuck = 1;
-                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                    if (p->path == NULL)
-                    {
-                        perror("Error reallocating memory");
-                    }
                 }
                 sstuck = -1;
             }
@@ -97,16 +92,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
-
-        // allocate memory for particle path
-        particles_list[i].path = malloc(sizeof(position) * ITERATIONS);
-        if (particles_list[i].path == NULL)
-        {
-            perror("Error allocating memory for paths. \n");
-        }
-        // set the first position of the path
-        particles_list[i].path[0] = *particles_list[i].current_position;
-        particles_list[i].size_path = 1;
     }
 }
 
@@ -146,8 +131,6 @@ void start_DLA(int num_particles,
                 {
                     move_parallel(p);
                 }
-                p->path[t] = *p->current_position;
-                p->size_path++;
             }
         }
         #pragma omp barrier
@@ -204,8 +187,6 @@ int main(int argc, char *argv[])
     // save matrix
     write_matrix(n, m, matrix);
 
-    // save paths
-    write_paths(num_particles, particles_list);
     createImage_intMatrix(img, n, m, matrix);
     saveImage(img, "final_img.webp");
     // -----FINALIZE----- //
@@ -225,8 +206,6 @@ int main(int argc, char *argv[])
     {
         if (particles_list[i].current_position != NULL)
             free(particles_list[i].current_position);
-        if (particles_list[i].path != NULL)
-            free(particles_list[i].path);
     }
     printf("particles's path and current_position, ");
 
