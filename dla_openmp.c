@@ -32,7 +32,7 @@ int check_position(int n, int m, int **matrix, particle *p)
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
     int i;
-    #pragma omp parallel for num_threads(thread_count) shared(p) private(i)
+    
     for (i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
