@@ -31,8 +31,9 @@ int check_position(int n, int m, int **matrix, particle *p)
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    #pragma omp parallel for num_threads(thread_count)
-    for (int i = 0; i < 8; i += 2)
+    int i;
+    #pragma omp parallel for num_threads(thread_count) shared(p) private(i)
+    for (i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
@@ -40,16 +41,16 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                    if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
+                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
+                {
+                    #pragma omp atomic write
+                    matrix[p->current_position->y][p->current_position->x] = 1;
+                    p->stuck = 1;
+                    p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
+                    if (p->path == NULL)
                     {
-                        #pragma omp atomic write
-                        matrix[p->current_position->y][p->current_position->x] = 1;
-                        p->stuck = 1;
-                        p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                        if (p->path == NULL)
-                        {
-                            perror("Error reallocating memory");
-                        }
+                        perror("Error reallocating memory");
+                    }
                 }
                 sstuck = -1;
             }
@@ -130,7 +131,7 @@ void start_DLA(int num_particles,
                int **matrix)
 {
     printf("Starting DLA\n");
-    for (int t = 1; t < ITERATIONS; t++)
+    for (int t = 0; t < ITERATIONS; t++)
     {
         // Itero per particelle per ogni iterazione
         int i;
@@ -204,7 +205,7 @@ int main(int argc, char *argv[])
     write_matrix(n, m, matrix);
 
     // save paths
-    //write_paths(num_particles, particles_list);
+    write_paths(num_particles, particles_list);
     createImage_intMatrix(img, n, m, matrix);
     saveImage(img, "final_img.webp");
     // -----FINALIZE----- //
