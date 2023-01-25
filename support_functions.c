@@ -22,8 +22,7 @@ typedef struct
     int dire; // direction
 
     int stuck;      // 0 = not stuck, 1 = stuck
-    position *path; // history path of the particle
-    int size_path;  // size of the path
+    int isOut;      // 
 } particle;
 
 typedef struct
@@ -39,6 +38,7 @@ void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part);
 void move_parallel(particle *part);
+void move_pthread(particle *p, cell** matrix, int n, int m);
 
 void write_matrix(int n, int m, int **matrix)
 {
@@ -72,30 +72,30 @@ void write_matrix(int n, int m, int **matrix)
  *  - ogni riga rappresenta un particella
  *  - ogni colonna rappresenta un iterazione
  */
-void write_paths(int num_particles, particle *particles_list)
-{
-    FILE *fptr2;
-    fptr2 = fopen("output/paths.txt", "w+");
-    if (fptr2 == NULL)
-        perror("Error opening file");
+// void write_paths(int num_particles, particle *particles_list)
+// {
+//     FILE *fptr2;
+//     fptr2 = fopen("output/paths.txt", "w+");
+//     if (fptr2 == NULL)
+//         perror("Error opening file");
 
-    for (int i = 0; i < num_particles; i++)
-    {
-        particle *p = &particles_list[i];
-        for (int j = 0; j < p->size_path; j++)
-        {
-            fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
-        }
-        fprintf(fptr2, "\n");
-    }
+//     for (int i = 0; i < num_particles; i++)
+//     {
+//         particle *p = &particles_list[i];
+//         for (int j = 0; j < p->size_path; j++)
+//         {
+//             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
+//         }
+//         fprintf(fptr2, "\n");
+//     }
 
-    if (ferror(fptr2))
-        perror("Error writing file");
+//     if (ferror(fptr2))
+//         perror("Error writing file");
 
-    // close file
-    if (fclose(fptr2))
-        perror("Error closing file");
-}
+//     // close file
+//     if (fclose(fptr2))
+//         perror("Error closing file");
+// }
 
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
@@ -191,11 +191,34 @@ void move_parallel(particle *p)
     p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
 }
 
+void move_pthread(particle *p, cell** matrix, int n, int m)
+{
+
+    // move particle
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
+
+    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
+    
+    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
+    {
+        p->isOut = 1;
+        return;
+    }
+    else
+    {
+        p->isOut = 0;
+        matrix[p->current_position->y][p->current_position->x].value += 2;
+    }
+
+}
+
 void write_matrix_cell(int n, int m, cell **matrix)
 {
     FILE *fptr;
 
-    fptr = fopen("output/matrix.txt", "w+");
+    fptr = fopen("output/matrix.txt", "a");
     if (fptr == NULL)
         perror("Error opening file");
 
@@ -207,6 +230,7 @@ void write_matrix_cell(int n, int m, cell **matrix)
         }
         fprintf(fptr, "\n");
     }
+    fprintf(fptr, "\n");
 
     if (ferror(fptr))
         perror("Error writing file");
@@ -229,17 +253,22 @@ void createImage_intMatrix(gdImagePtr img, int width, int height, int** matrix) 
     }
 }
 
-void createImage(gdImagePtr img, int width, int height, cell** matrix) {
-    printf("Creating image...\n");
+void createImage(gdImagePtr img, int width, int height, cell** matrix, char* filename) {
     int black = gdImageColorAllocate(img, 0, 0, 0);
-    int white = gdImageColorAllocate(img, 255, 255, 255);
+    int red = gdImageColorAllocate(img, 255, 0, 0);
 
     for (int y = 0; y<height; y++) {
         for (int x = 0; x < width; x++) {
-            int color = matrix[y][x].value == 0 ? white : black;
-            gdImageSetPixel(img, x, y, color);
+            if (matrix[y][x].value == 1) {
+                gdImageSetPixel(img, x, y, black);
+            } else if (matrix[y][x].value > 1){
+                gdImageSetPixel(img, x, y, red);
+            }
         }
     }
+    FILE *out = fopen(filename, "wb");
+    gdImageBmp(img, out, -1);
+    fclose(out);
 }
 
 void saveImage(gdImagePtr img, char* filename){
@@ -247,8 +276,4 @@ void saveImage(gdImagePtr img, char* filename){
     FILE *out = fopen(filename, "wb");
     gdImageBmp(img, out, -1);
     fclose(out);
-
-    // Liberare la memoria
-    gdImageDestroy(img);
-
 }

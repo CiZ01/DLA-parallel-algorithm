@@ -1,26 +1,43 @@
 #include <stdio.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <math.h>
+#include <gd.h>
 
-int main() {
-    // Inizializzazione del generatore di numeri casuali
-    const gsl_rng_type * T;
-    gsl_rng * r;
-    T = gsl_rng_default;
-    r = gsl_rng_alloc (T);
-  
-    int x = 0; // Posizione iniziale
-    double dt = 0.1; // Passo di simulazione
-    double sigma = 1; // Deviazione standard
+gdImagePtr im, im2, im;
+int black, white, trans;
+FILE *out;
 
-    for (int i = 0; i < 100; i++) {
-        // Aggiungi una deviazione casuale normalmente distribuita alla posizione corrente
-        x += (int )gsl_ran_gaussian(r, sigma) * sqrt(dt);
-        printf("%f\n", x);
-    }
+int main(){
+    im = gdImageCreate(100, 100);     // Create the image
+    white = gdImageColorAllocate(im, 255, 255, 255); // Allocate background
+    black = gdImageColorAllocate(im, 0, 0, 0); // Allocate drawing color
+    trans = gdImageColorAllocate(im, 1, 1, 1); // trans clr for compression
+    gdImageRectangle(im, 0, 0, 10, 10, black); // Draw rectangle
 
-    // Libera la memoria utilizzata dal generatore di numeri casuali
-    gsl_rng_free (r);
-    return 0;
+    out = fopen("anim.gif", "wb");// Open output file in binary mode
+    gdImageGifAnimBegin(im, out, 1, 3);// Write GIF hdr, global clr map,loops
+    // Write the first frame.  No local color map.  Delay = 1s
+    gdImageGifAnimAdd(im, out, 0, 0, 0, 100, 1, NULL);
+
+    // construct the second frame
+    im2 = gdImageCreate(100, 100);
+    (void)gdImageColorAllocate(im2, 255, 255, 255); // White background
+    gdImagePaletteCopy (im2, im);  // Make sure the palette is identical
+    gdImageRectangle(im2, 0, 0, 15, 15, black);    // Draw something
+    // Allow animation compression with transparent pixels
+    gdImageColorTransparent (im2, trans);
+    gdImageGifAnimAdd(im2, out, 0, 0, 0, 100, 1, im);  // Add second frame
+
+    // construct the third frame
+    im = gdImageCreate(100, 100);
+    (void)gdImageColorAllocate(im, 255, 255, 255); // white background
+    gdImageRectangle(im, 0, 0, 15, 20, black); // Draw something
+    // Allow animation compression with transparent pixels
+    gdImageColorTransparent (im, trans);
+    // Add the third frame, compressing against the second one
+    gdImageGifAnimAdd(im, out, 0, 0, 0, 100, 1, im2);
+    gdImageGifAnimEnd(out);  // End marker, same as putc(';', out);
+    fclose(out); // Close file
+
+    // Destroy images
+    gdImageDestroy(im);
+    gdImageDestroy(im2);
 }
