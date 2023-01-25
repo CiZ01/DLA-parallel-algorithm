@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     write_matrix(n, m, matrix);
 
     createImage_intMatrix(img, n, m, matrix);
-    saveImage(img, "final_img.webp");
+    saveImage(img, "final_img.jpg");
     // -----FINALIZE----- //
 
     printf("freed memory: ");
