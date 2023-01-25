@@ -24,16 +24,9 @@ int thread_count;
  */
 int check_position(int n, int m, int **matrix, particle *p)
 {
-    int sstuck;
-    if (p->isOut == 1)
-    {
-        return 0;
-    }
-
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    int i;
     
-    for (i = 0; i < 8; i += 2)
+    for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
@@ -41,22 +34,14 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
-                {
-                    #pragma omp atomic write
-                    matrix[p->current_position->y][p->current_position->x] = 1;
-                    p->stuck = 1;
-                }
-                sstuck = -1;
+                #pragma omp atomic write
+                matrix[p->current_position->y][p->current_position->x] = 1;
+                p->stuck = 1;
+                return -1;
             }
         }
     }
-    if (p->stuck == 1)
-    {
-        return sstuck;
-    } else {
-        return 0;
-    }
+    return 0;
 }
 
 
@@ -125,7 +110,7 @@ void start_DLA(int num_particles,
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
-            if (p->stuck == 0)
+            if (p->stuck == 0 && p->isOut == 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0)
