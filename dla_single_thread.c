@@ -5,16 +5,9 @@
 #include <errno.h>
 #include "support_functions.c"
 
-<<<<<<< HEAD
-=======
-#define ITERATIONS 1000
-
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
-
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
 int check_position(int n, int m, int **matrix, particle *p);
-
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -26,14 +19,14 @@ int check_position(int n, int m, int **matrix, particle *p);
 int check_position(int n, int m, int **matrix, particle *p)
 {
     if (p->isOut == 1)
-        {
-            return 0;
-        }
+    {
+        return 0;
+    }
 
     if (p->stuck == -1)
     {
-        p->stuck = 1;
         matrix[p->current_position->y][p->current_position->x] = 1;
+        p->stuck = 1;
         return -1;
     }
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
@@ -46,23 +39,13 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
-                {
-<<<<<<< HEAD
-                    matrix[p->current_position->y][p->current_position->x] = 1;
-                    p->stuck = 1;
-=======
-                    p->stuck = -1;
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
-                    return -1;
-                }
+                p->stuck = -1;
+                return -1;
             }
         }
     }
     return 0;
 }
-
-
 
 /*
  * gen_particles genera una lista di particelle con posizione casuale.
@@ -82,7 +65,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
     for (int i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
-        particles_list[i].current_position =(position*)malloc(sizeof(position));
+        particles_list[i].current_position = (position *)malloc(sizeof(position));
         if (particles_list[i].current_position == NULL)
         {
             perror("Error allocating memory for current_position. \n");
@@ -96,13 +79,9 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
-<<<<<<< HEAD
-        particles_list[i].stuck = 0;    }
-=======
         particles_list[i].stuck = 0;
         particles_list[i].isOut = 0;
     }
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
 }
 
 /*
@@ -125,26 +104,20 @@ void start_DLA(int num_particles,
                int **matrix, int horizon)
 {
     printf("Starting DLA\n");
-<<<<<<< HEAD
-    for (int t = 1; t < horizon; t++)
+    for (int t = 0; t < horizon + 1; t++)
     {
-=======
-    for (int t = 1; t < ITERATIONS + 1; t++)
-    {   
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
         // Itero per particelle per ogni iterazione
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
-            if (p->stuck == 0)
+            if (p->stuck <= 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
-                if (isStuck == 0 && t < ITERATIONS)
+                if (isStuck == 0 && t < horizon)
                 {
-                    move(p);
+                    move(p, n, m);
                 }
             }
-
         }
     }
     printf("Finished DLA\n");
@@ -180,6 +153,7 @@ int main(int argc, char *argv[])
     if (particles_list == NULL)
         perror("Error allocating memory");
 
+    int seed_rand = time(NULL);
     srand(seed_rand); // set seed for random
 
     // create particles
@@ -190,22 +164,21 @@ int main(int argc, char *argv[])
     // start DLA
     start_DLA(num_particles, particles_list, n, m, matrix, horizon);
 
-    clock_t end = clock() ;
-    printf("time: %f\n", (double)((end - start)/CLOCKS_PER_SEC));
+    clock_t end = clock();
+    double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("time: %f\n", elapsed);
 
-    FILE* elapsed_time = fopen("elapsed_time.txt", "a");
-    fprintf(elapsed_time, "%f\n", (double)((end - start)/CLOCKS_PER_SEC));
+    FILE *elapsed_time = fopen("./times/time_dla_single_thread.txt", "a");
+    fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
 
-<<<<<<< HEAD
-=======
+    write_matrix(n, m, matrix);
 
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
-    gdImagePtr img = gdImageCreate(m, n); 
+    gdImagePtr img = gdImageCreate(m, n);
     int colors[2];
     colors[0] = gdImageColorAllocate(img, 255, 255, 255); // white
-    colors[1] = gdImageColorAllocate(img, 0, 0, 0); // black
-    createImage_intMatrix(img, m,n, matrix, colors, "DLA.png");
+    colors[1] = gdImageColorAllocate(img, 255, 0, 0);       // red
+    createImage_intMatrix(img, m, n, matrix, colors, "DLA.jpg");
 
     // -----FINALIZE----- //
 
@@ -219,16 +192,14 @@ int main(int argc, char *argv[])
     printf("matrix, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
-    
-  
+
+    printf("destroy image pointer, ");
+    gdImageDestroy(img);
+
     for (int i = 0; i < num_particles; i++)
     {
         if (particles_list[i].current_position != NULL)
             free(particles_list[i].current_position);
-<<<<<<< HEAD
-=======
-
->>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
     }
     printf("current_position, ");
 

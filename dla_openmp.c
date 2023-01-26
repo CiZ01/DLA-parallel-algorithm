@@ -8,10 +8,6 @@
 
 gdImagePtr img;
 
-#define ITERATIONS 1000
-
-
-
 int thread_count;
 
 
@@ -110,10 +106,10 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 void start_DLA(int num_particles,
                particle *particles_list,
                int n, int m,
-               int **matrix)
+               int **matrix, int horizon)
 {
     printf("Starting DLA\n");
-    for (int t = 0; t < ITERATIONS + 1; t++)
+    for (int t = 0; t < horizon + 1; t++)
     {
         // Itero per particelle per ogni iterazione
         int i;
@@ -124,7 +120,7 @@ void start_DLA(int num_particles,
             if (p->stuck <= 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
-                if (isStuck == 0 && t < ITERATIONS)
+                if (isStuck == 0 && t < horizon)
                 {
                     move_parallel(p, n, m);
                 }
@@ -141,9 +137,10 @@ int main(int argc, char *argv[])
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
     int num_particles; // number of particles
+    int horizon;      // horizon
 
 
-    get_args_parallel(argv, &num_particles, &n, &m, seed, &thread_count);
+    get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
     // fflush(stdout);
     // num_particles = 50;
@@ -151,7 +148,6 @@ int main(int argc, char *argv[])
     // m = 10;
     // seed[0] = 50;
     // seed[1] = 50;
-    img = gdImageCreate(m, n);
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     int **matrix;
@@ -176,16 +172,29 @@ int main(int argc, char *argv[])
     gen_particles(seed, num_particles, particles_list, n, m);
 
     // start DLA
-    time_t begin = time(NULL);
-    start_DLA(num_particles, particles_list, n, m, matrix);
-    time_t end = time(NULL);
-    printf("il tempo impiegato per il DLA è: %ld \n", (end-begin));
+    clock_t start = clock();
+    start_DLA(num_particles, particles_list, n, m, matrix, horizon);
+    clock_t end = clock();
+
+    double elapsed = (double)((end - start) / CLOCKS_PER_SEC)/thread_count;
+    
+    printf("il tempo impiegato per il DLA è: %f \n", elapsed);
+
+    FILE *elapsed_time = fopen("./times/time_dla_openmp.txt", "a");
+    fprintf(elapsed_time, "%f\n", elapsed);
+    fclose(elapsed_time);
     // -----SAVE DATA----- //
     // save matrix
     write_matrix(n, m, matrix);
 
-    createImage_intMatrix(img, n, m, matrix);
-    saveImage(img, "final_img.jpg");
+    img = gdImageCreate(m, n);
+    int black = gdImageColorAllocate(img, 0, 0, 0);
+    int red = gdImageColorAllocate(img, 255, 0, 0);
+
+    int colors[] = {black, red};
+
+    //filename a caso da sistemare
+    createImage_intMatrix(img, m, n, matrix, colors, "DLA_openmp.jpg");
     // -----FINALIZE----- //
 
     printf("freed memory: ");

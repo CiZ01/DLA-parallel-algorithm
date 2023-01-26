@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h> //solo perché vscode da errore su optarg
 #include <string.h>
 #include <time.h>
 #include <gd.h>
@@ -11,7 +12,7 @@
 #define HORIZON 1000
 
 unsigned int gen_rand = 586761;
-int seed_rand = 586761;
+int seed_rand = 2;
 
 typedef struct
 {
@@ -41,7 +42,7 @@ void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *s
 void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
-void move(particle *part);
+void move(particle *p, int n, int m);
 void move_parallel(particle *part, int n, int m);
 void move_pthread(particle *p, cell **matrix, int n, int m);
 
@@ -93,14 +94,14 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
     *num_threads = NUM_THREADS;
 
     int opt;
-    while ((opt = getopt(argc, argv, "-n:-h:-s:")) != -1)
+    while ((opt = getopt(argc, argv, "-n:-t:-s:")) != -1)
     {
         switch (opt)
         {
         case 'n':
             *num_threads = atoi(optarg);
             break;
-        case 'h':
+        case 't':
             *horizon = atoi(optarg);
             break;
         case 's':
@@ -138,11 +139,11 @@ void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *s
     *horizon = HORIZON;
 
     int opt;
-    while ((opt = getopt(argc, argv, "-h:-s:")) != -1)
+    while ((opt = getopt(argc, argv, "-t:-s:")) != -1)
     {
         switch (opt)
         {
-        case 'h':
+        case 't':
             *horizon = atoi(optarg);
             break;
         case 's':
@@ -186,7 +187,7 @@ void print_matrix(int n, int m, int **matrix)
  * La funzione riceve in input la particella interessata.
  * La funzione non ritorna nulla.
  */
-void move(particle *p)
+void move(particle *p, int n, int m)
 {
 
     // move particle
@@ -195,6 +196,17 @@ void move(particle *p)
 
     p->dire = rand() % 2 == 0 ? 1 : -1;
     p->current_position->y += rand() % 2 * p->dire;
+
+    
+    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
+    {
+        p->isOut = 1;
+        return;
+    }
+    else
+    {
+        p->isOut = 0;
+    }
 }
 
 void move_parallel(particle *p, int n, int m)
@@ -274,18 +286,18 @@ void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, 
         {
             if (matrix[y][x] == 1)
             {
-                gdImageSetPixel(img, x, y, colors[1]);
+                gdImageSetPixel(img, x, y, colors[0]); // set black
             }
-            else
+            else if (matrix[y][x] > 1)
             {
-                gdImageSetPixel(img, x, y, colors[0]);
+                gdImageSetPixel(img, x, y, colors[1]); //set red
             }
         }
     }
 
     // Salva l'immagine
     FILE *out = fopen(filename, "wb");
-    gdImageJpeg(img, out, -1);
+    gdImageJpeg(img, out, 100);
     fclose(out);
 }
 
@@ -306,6 +318,6 @@ void createImage(gdImagePtr img, int width, int height, cell **matrix, char *fil
         }
     }
     FILE *out = fopen(filename, "wb");
-    gdImageBmp(img, out, -1);
+    gdImageJpeg(img, out, 100);
     fclose(out);
 }

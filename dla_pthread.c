@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 
     rand_seed = (unsigned int)856;
 
-    time_t start = time(NULL);
+    clock_t start = clock();
 
     for (thread = 0; thread < num_threads; thread++)
         pthread_create(&thread_handles[thread], NULL, start_DLA_parallel, (void *)thread);
@@ -198,7 +198,14 @@ int main(int argc, char *argv[])
     for (thread = 0; thread < num_threads; thread++)
         pthread_join(thread_handles[thread], NULL);
 
-    time_t end = time(NULL);
+    clock_t end = clock();
+
+    double elapsed = (double)((end - start) / CLOCKS_PER_SEC)/num_threads;
+    printf("Elapsed time: %f seconds \n", elapsed);
+
+    FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
+    fprintf(elapsed_time, "%f\n", elapsed);
+    fclose(elapsed_time);
 
     char filename[100];
     sprintf(filename, "DLA_%d_%d_%d_%d_%d.png", n, m, num_particles, num_threads, horizon);
@@ -212,7 +219,6 @@ int main(int argc, char *argv[])
     printf("Creating image... \n");
     createImage(p_img, m, n, matrix, filename, colors);
 
-    printf("Elapsed time: %f seconds \n", (double)((end - start)));
 
     // -----FINALIZE----- //
 
