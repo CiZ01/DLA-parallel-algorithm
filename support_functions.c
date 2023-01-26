@@ -37,7 +37,7 @@ void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part);
-void move_parallel(particle *part);
+void move_parallel(particle *part, int n, int m);
 void move_pthread(particle *p, cell** matrix, int n, int m);
 
 void write_matrix(int n, int m, int **matrix)
@@ -180,7 +180,7 @@ void move(particle *p)
     p->current_position->y += rand() % 2 * p->dire;
 }
 
-void move_parallel(particle *p)
+void move_parallel(particle *p, int n, int m)
 {
 
     // move particle
@@ -189,6 +189,16 @@ void move_parallel(particle *p)
 
     p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
     p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
+
+    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
+    {
+        p->isOut = 1;
+        return;
+    }
+    else
+    {
+        p->isOut = 0;
+    }
 }
 
 void move_pthread(particle *p, cell** matrix, int n, int m)
