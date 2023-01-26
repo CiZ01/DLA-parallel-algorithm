@@ -28,6 +28,15 @@ int check_position(int n, int m, int **matrix, particle *p)
     {
         return 0;
     }
+
+    if (p->stuck == -1)
+    {
+        #pragma omp atomic write
+        matrix[p->current_position->y][p->current_position->x] = 1;
+        p->stuck = 1;
+        return -1;
+    }
+
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
     
     for (int i = 0; i < 8; i += 2)
@@ -38,9 +47,7 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                #pragma omp atomic write
-                matrix[p->current_position->y][p->current_position->x] = 1;
-                p->stuck = 1;
+                p->stuck = -1;
                 return -1;
             }
         }
@@ -114,7 +121,7 @@ void start_DLA(int num_particles,
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
-            if (p->stuck == 0)
+            if (p->stuck <= 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0 && t < ITERATIONS)

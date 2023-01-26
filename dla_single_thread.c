@@ -5,6 +5,11 @@
 #include <errno.h>
 #include "support_functions.c"
 
+<<<<<<< HEAD
+=======
+#define ITERATIONS 1000
+
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
 
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
@@ -20,11 +25,17 @@ int check_position(int n, int m, int **matrix, particle *p);
  */
 int check_position(int n, int m, int **matrix, particle *p)
 {
-    if (p->stuck == 1)
+    if (p->isOut == 1)
+        {
+            return 0;
+        }
+
+    if (p->stuck == -1)
     {
+        p->stuck = 1;
+        matrix[p->current_position->y][p->current_position->x] = 1;
         return -1;
     }
-
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
     for (int i = 0; i < 8; i += 2)
@@ -37,8 +48,12 @@ int check_position(int n, int m, int **matrix, particle *p)
             {
                 if (p->current_position->x >= 0 && p->current_position->x < n && p->current_position->y >= 0 && p->current_position->y < m)
                 {
+<<<<<<< HEAD
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     p->stuck = 1;
+=======
+                    p->stuck = -1;
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
                     return -1;
                 }
             }
@@ -81,7 +96,13 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
+<<<<<<< HEAD
         particles_list[i].stuck = 0;    }
+=======
+        particles_list[i].stuck = 0;
+        particles_list[i].isOut = 0;
+    }
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
 }
 
 /*
@@ -104,8 +125,13 @@ void start_DLA(int num_particles,
                int **matrix, int horizon)
 {
     printf("Starting DLA\n");
+<<<<<<< HEAD
     for (int t = 1; t < horizon; t++)
     {
+=======
+    for (int t = 1; t < ITERATIONS + 1; t++)
+    {   
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
         // Itero per particelle per ogni iterazione
         for (int i = 0; i < num_particles; i++)
         {
@@ -113,11 +139,9 @@ void start_DLA(int num_particles,
             if (p->stuck == 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
-                if (isStuck == 0)
+                if (isStuck == 0 && t < ITERATIONS)
                 {
                     move(p);
-                    // p->path[t] = *p->current_position;
-                    // p->size_path++;
                 }
             }
 
@@ -173,6 +197,10 @@ int main(int argc, char *argv[])
     fprintf(elapsed_time, "%f\n", (double)((end - start)/CLOCKS_PER_SEC));
     fclose(elapsed_time);
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
     gdImagePtr img = gdImageCreate(m, n); 
     int colors[2];
     colors[0] = gdImageColorAllocate(img, 255, 255, 255); // white
@@ -197,8 +225,12 @@ int main(int argc, char *argv[])
     {
         if (particles_list[i].current_position != NULL)
             free(particles_list[i].current_position);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0b6f92114f636a298a3b99d04b3e35eb2f518be5
     }
-    printf("particles's path and current_position, ");
+    printf("current_position, ");
 
     if (particles_list != NULL)
         free(particles_list);
