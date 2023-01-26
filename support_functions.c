@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-unsigned gen_rand = 586;
+unsigned int gen_rand = 586761;
 
 typedef struct
 {
@@ -37,7 +37,7 @@ void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part);
-void move_parallel(particle *part);
+void move_parallel(particle *part, int n, int m);
 void move_pthread(particle *p, cell** matrix, int n, int m);
 
 void write_matrix(int n, int m, int **matrix)
@@ -65,37 +65,6 @@ void write_matrix(int n, int m, int **matrix)
         perror("Error closing file");
 }
 
-/*
- * Prende in input il numero di particelle e la lista di particelle.
- * Salva su un file di testo tutti i percorsi delle particelle.
- * Il file di testo sarà formattato come segue:
- *  - ogni riga rappresenta un particella
- *  - ogni colonna rappresenta un iterazione
- */
-// void write_paths(int num_particles, particle *particles_list)
-// {
-//     FILE *fptr2;
-//     fptr2 = fopen("output/paths.txt", "w+");
-//     if (fptr2 == NULL)
-//         perror("Error opening file");
-
-//     for (int i = 0; i < num_particles; i++)
-//     {
-//         particle *p = &particles_list[i];
-//         for (int j = 0; j < p->size_path; j++)
-//         {
-//             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
-//         }
-//         fprintf(fptr2, "\n");
-//     }
-
-//     if (ferror(fptr2))
-//         perror("Error writing file");
-
-//     // close file
-//     if (fclose(fptr2))
-//         perror("Error closing file");
-// }
 
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
@@ -180,7 +149,7 @@ void move(particle *p)
     p->current_position->y += rand() % 2 * p->dire;
 }
 
-void move_parallel(particle *p)
+void move_parallel(particle *p, int n, int m)
 {
 
     // move particle
@@ -189,6 +158,16 @@ void move_parallel(particle *p)
 
     p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
     p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
+
+    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
+    {
+        p->isOut = 1;
+        return;
+    }
+    else
+    {
+        p->isOut = 0;
+    }
 }
 
 void move_pthread(particle *p, cell** matrix, int n, int m)
@@ -274,6 +253,6 @@ void createImage(gdImagePtr img, int width, int height, cell** matrix, char* fil
 void saveImage(gdImagePtr img, char* filename){
     // Salva l'immagine
     FILE *out = fopen(filename, "wb");
-    gdImageBmp(img, out, -1);
+    gdImageJpeg(img, out, -1);
     fclose(out);
 }
