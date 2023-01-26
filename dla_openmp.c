@@ -10,7 +10,7 @@ gdImagePtr img;
 
 #define ITERATIONS 1000
 
-unsigned int gen_rand;
+
 
 int thread_count;
 
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
     int num_particles; // number of particles
-    gen_rand = 856;
+
 
     get_args_parallel(argv, &num_particles, &n, &m, seed, &thread_count);
     // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
