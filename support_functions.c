@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-unsigned gen_rand = 586;
+unsigned int gen_rand = 586761;
 
 typedef struct
 {
@@ -65,37 +65,6 @@ void write_matrix(int n, int m, int **matrix)
         perror("Error closing file");
 }
 
-/*
- * Prende in input il numero di particelle e la lista di particelle.
- * Salva su un file di testo tutti i percorsi delle particelle.
- * Il file di testo sarà formattato come segue:
- *  - ogni riga rappresenta un particella
- *  - ogni colonna rappresenta un iterazione
- */
-// void write_paths(int num_particles, particle *particles_list)
-// {
-//     FILE *fptr2;
-//     fptr2 = fopen("output/paths.txt", "w+");
-//     if (fptr2 == NULL)
-//         perror("Error opening file");
-
-//     for (int i = 0; i < num_particles; i++)
-//     {
-//         particle *p = &particles_list[i];
-//         for (int j = 0; j < p->size_path; j++)
-//         {
-//             fprintf(fptr2, "%d,%d,", p->path[j].y, p->path[j].x);
-//         }
-//         fprintf(fptr2, "\n");
-//     }
-
-//     if (ferror(fptr2))
-//         perror("Error writing file");
-
-//     // close file
-//     if (fclose(fptr2))
-//         perror("Error closing file");
-// }
 
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
