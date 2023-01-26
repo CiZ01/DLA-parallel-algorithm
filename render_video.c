@@ -9,15 +9,21 @@
 #include <time.h>
 #include "support_functions.c"
 
-
 int num_threads;
 int n, m, num_particles, horizon;
 int seed[2];
 cell **matrix;
 unsigned int rand_seed;
 pthread_barrier_t barrier;
+char filename[32];
 
+// gd variables
 gdImagePtr p_img;
+#define white gdImageColorAllocate(p_img, 255, 255, 255)
+#define black gdImageColorAllocate(p_img, 0, 0, 0)
+#define red gdImageColorAllocate(p_img, 255, 0, 0)
+
+int colors[2];
 
 void *start_DLA_parallel(void *rank);
 int check_position_parallel(int n, int m, cell **matrix, particle *p);
@@ -59,6 +65,8 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
         my_particles_list[i].dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
         my_particles_list[i].stuck = 0;
         my_particles_list[i].isOut = 0;
+
+        
     }
 }
 
@@ -75,7 +83,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
     {
         return 0;
     }
-
+    //else
     if (matrix[p->current_position->y][p->current_position->x].value >= 2){
         matrix[p->current_position->y][p->current_position->x].value -= 2;
     }
@@ -117,6 +125,7 @@ void *start_DLA_parallel(void *rank)
         perror("Error allocating memory for particles. \n");
     }
 
+    printf("%d --- %d\n", (int)my_rank, my_num_particles);
     gen_particles_parallel(seed, my_num_particles, my_particles_list, n, m);
 
     printf("%d.Starting DLA\n", (int)my_rank);
@@ -138,9 +147,19 @@ void *start_DLA_parallel(void *rank)
         }
         // BARRIER
         pthread_barrier_wait(&barrier);
+        if ((int)my_rank == 0)
+        {
+            //write_matrix_cell(n, m, matrix);
+            sprintf(filename, "imgs/frames/frame_%05d.jpg", t);
+            createImage(p_img, m, n, matrix, filename, colors);
+            gdImageFilledRectangle(p_img, 0, 0, m, n, white);     
+        }
+        // tutti si devono fermare qua mentre aspettano il thread 0
+        pthread_barrier_wait(&barrier);
+        // BARRIER
     }
 
-    // FINALIZE THREAD //
+    // FINALIZE //
 
     // free memory
     for (int i = 0; i < my_num_particles; i++)
@@ -158,6 +177,11 @@ int main(int argc, char *argv[])
 {
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
+
+    if (num_threads > num_particles)
+        num_threads = num_particles;
+    
+    printf("num_threads: %d \n", num_threads);
 
     matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
@@ -184,6 +208,13 @@ int main(int argc, char *argv[])
 
     rand_seed = (unsigned int)856;
 
+    // create image
+    p_img = gdImageCreate(m, n);
+    // assign colors
+    colors[0] = black;
+    colors[1] = red;
+
+
     time_t start = time(NULL);
 
     for (thread = 0; thread < num_threads; thread++)
@@ -193,19 +224,14 @@ int main(int argc, char *argv[])
         pthread_join(thread_handles[thread], NULL);
 
     time_t end = time(NULL);
-
-    char filename[100];
-    sprintf(filename, "DLA_%d_%d_%d_%d_%d.png", n, m, num_particles, num_threads, horizon);
-    p_img = gdImageCreate(m, n);
-    int black = gdImageColorAllocate(p_img, 0, 0, 0);
-    int red = gdImageColorAllocate(p_img, 255, 0, 0);
-    int colors[] = {black, red};
-
-    printf("Creating image... \n");
-    createImage(p_img, m, n, matrix, filename, colors);
-
-
     printf("Elapsed time: %f seconds \n", (double)((end - start)));
+
+    printf("Rendering video...\n");
+    int status = system("ffmpeg -framerate 80 -pattern_type glob -i './imgs/frames/*.jpg' -c:v libx264 -crf 28 -pix_fmt yuv420p animation.mp4 -y > /dev/null" );
+    if (status == -1)
+        perror("Error creating gif");
+
+
 
     // -----FINALIZE----- //
 
@@ -224,14 +250,14 @@ int main(int argc, char *argv[])
         free(matrix); // Libera la memoria dell'array di puntatori
 
     if (p_img != NULL)
-        gdImageDestroy(p_img); // Libera la memoria dell'immagine
+        gdImageDestroy(p_img);
     printf("gdImage pointer, ");
 
-    pthread_barrier_destroy(&barrier); // Distrugge la barriera
+    pthread_barrier_destroy(&barrier);
     printf("barrier, ");
 
     if (thread_handles != NULL)
-        free(thread_handles); // Libera la lista dei threads
+        free(thread_handles);
     printf("thread_handles \n");
 
     return 0;
