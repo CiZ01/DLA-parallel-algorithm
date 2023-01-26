@@ -106,7 +106,7 @@ void start_DLA(int num_particles,
                int **matrix)
 {
     printf("Starting DLA\n");
-    for (int t = 0; t < ITERATIONS; t++)
+    for (int t = 0; t < ITERATIONS + 1; t++)
     {
         // Itero per particelle per ogni iterazione
         int i;
@@ -117,7 +117,7 @@ void start_DLA(int num_particles,
             if (p->stuck == 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
-                if (isStuck == 0)
+                if (isStuck == 0 && t < ITERATIONS)
                 {
                     move_parallel(p, n, m);
                 }
