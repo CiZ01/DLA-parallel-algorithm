@@ -27,10 +27,14 @@ Per avviare la versione single thread basta eseguire il seguente comando e setta
 
 Per le versioni multi thread:
 
- - OpenMP - `./dla_openmp.out n,m x,y num_particles num_threads`
- - pthread - `./dla_pthread.out n,m num_particles x,y num_threads` \
- In tutti e due i casi _num_threads_ sta per il numero di threads che si vuole [***opzionale***] \
- Se non specificato il valore di default è 4.
+ - OpenMP - `./dla_openmp.out n,m num_particles [-OPTIONS]]` 
+ - pthread - `./dla_pthread.out n,m num_particles [-OPTIONS]` \
+
+Dove n,m sono le dimensioni della matrice, num_particles è il numero di particelle da istanziare. \
+Le opzioni sono:
+ - -n _numero di thread da usare_ [default 4]
+ - -s _posizione del seed_ [default generato casualmente]
+ - -t _orizzonte di simulazione_ [default 1000]
 
 ## Come funziona
 Il programma è molto semplice, le tre implementazioni differiscono di poco, l'idea di fondo è sempre la stessa.

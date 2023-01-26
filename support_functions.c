@@ -1,12 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <gd.h>
 #include <errno.h>
 #include <pthread.h>
 
+#define NUM_THREADS 4
+#define HORIZON 1000
+
 unsigned int gen_rand = 586761;
+int seed_rand = 586761;
 
 typedef struct
 {
@@ -21,8 +26,8 @@ typedef struct
     int vel;  // velocity
     int dire; // direction
 
-    int stuck;      // 0 = not stuck, 1 = stuck
-    int isOut;      // 
+    int stuck; // 0 = not stuck, 1 = stuck
+    int isOut; //
 } particle;
 
 typedef struct
@@ -31,14 +36,14 @@ typedef struct
     pthread_mutex_t mutex;
 } cell;
 
-void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count);
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed);
+void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon);
+void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon);
 void write_matrix(int n, int m, int **matrix);
 void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *part);
 void move_parallel(particle *part, int n, int m);
-void move_pthread(particle *p, cell** matrix, int n, int m);
+void move_pthread(particle *p, cell **matrix, int n, int m);
 
 void write_matrix(int n, int m, int **matrix)
 {
@@ -65,54 +70,97 @@ void write_matrix(int n, int m, int **matrix)
         perror("Error closing file");
 }
 
-
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
  * In caso di mancato argomento il programma termina per un segmentation fault.
  */
-void get_args_parallel(char *argv[], int *num_particles, int *n, int *m, int *seed, int *thread_count)
+void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon)
 {
     // get matrix dimensions
-    char *sizes = argv[1];
-    char *token = strtok(sizes, ",");
+    char *token = strtok(argv[1], ",");
     *n = (int)atoi(token);
     token = strtok(NULL, ",");
     *m = (int)atoi(token);
 
-    // get seed position
-    char *seed_pos = argv[2];
-    token = strtok(seed_pos, ",");
-    seed[0] = (int)atoi(token);
-    token = strtok(NULL, ",");
-    seed[1] = (int)atoi(token);
-
     // get number of particles
-    *num_particles = (int)atoi(argv[3]);
+    *num_particles = (int)atoi(argv[2]);
 
-    // get number of threads
-    *thread_count = (int)atoi(argv[4]);
+    // get seed position
+    seed[0] = (int)rand_r(&gen_rand) % *n;
+    seed[1] = (int)rand_r(&gen_rand) % *m;
+
+    *horizon = HORIZON;
+    *num_threads = NUM_THREADS;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "-n:-h:-s:")) != -1)
+    {
+        switch (opt)
+        {
+        case 'n':
+            *num_threads = atoi(optarg);
+            break;
+        case 'h':
+            *horizon = atoi(optarg);
+            break;
+        case 's':
+            // get seed position
+            token = strtok(optarg, ",");
+            seed[0] = (int)atoi(token);
+            token = strtok(NULL, ",");
+            seed[1] = (int)atoi(token);
+            break;
+        case ':':
+            printf("Opzione richiede un argomento: %c", opt);
+            break;
+        case '?':
+            printf("Opzione non valida: %c\n", opt);
+            break;
+        }
+    }
 }
 
-void get_args(char *argv[], int *num_particles, int *n, int *m, int *seed)
+void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon)
 {
     // get matrix dimensions
-    char *sizes = argv[1];
-    char *token = strtok(sizes, ",");
+    char *token = strtok(argv[1], ",");
     *n = (int)atoi(token);
     token = strtok(NULL, ",");
     *m = (int)atoi(token);
 
-    // get seed position
-    char *seed_pos = argv[2];
-    token = strtok(seed_pos, ",");
-    seed[0] = (int)atoi(token);
-    token = strtok(NULL, ",");
-    seed[1] = (int)atoi(token);
-
     // get number of particles
-    *num_particles = (int)atoi(argv[3]);
-}
+    *num_particles = (int)atoi(argv[2]);
 
+    // get seed position
+    seed[0] = (int)rand_r(&gen_rand) % *n;
+    seed[1] = (int)rand_r(&gen_rand) % *m;
+
+    *horizon = HORIZON;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "-h:-s:")) != -1)
+    {
+        switch (opt)
+        {
+        case 'h':
+            *horizon = atoi(optarg);
+            break;
+        case 's':
+            // get seed position
+            token = strtok(optarg, ",");
+            seed[0] = (int)atoi(token);
+            token = strtok(NULL, ",");
+            seed[1] = (int)atoi(token);
+            break;
+        case ':':
+            printf("Opzione richiede un argomento: %c", opt);
+            break;
+        case '?':
+            printf("Opzione non valida: %c\n", opt);
+            break;
+        }
+    }
+}
 
 /*
  * print_matrix stampa la matrice.
@@ -170,7 +218,7 @@ void move_parallel(particle *p, int n, int m)
     }
 }
 
-void move_pthread(particle *p, cell** matrix, int n, int m)
+void move_pthread(particle *p, cell **matrix, int n, int m)
 {
 
     // move particle
@@ -179,7 +227,7 @@ void move_pthread(particle *p, cell** matrix, int n, int m)
 
     p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
     p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
-    
+
     if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
     {
         p->isOut = 1;
@@ -190,7 +238,6 @@ void move_pthread(particle *p, cell** matrix, int n, int m)
         p->isOut = 0;
         matrix[p->current_position->y][p->current_position->x].value += 2;
     }
-
 }
 
 void write_matrix_cell(int n, int m, cell **matrix)
@@ -219,40 +266,46 @@ void write_matrix_cell(int n, int m, cell **matrix)
         perror("Error closing file");
 }
 
-void createImage_intMatrix(gdImagePtr img, int width, int height, int** matrix) {
-    printf("Creating image...\n");
-    int black = gdImageColorAllocate(img, 0, 0, 0);
-    int white = gdImageColorAllocate(img, 255, 255, 255);
-
-    for (int y = 0; y<height; y++) {
-        for (int x = 0; x < width; x++) {
-            int color = matrix[y][x] == 0 ? white : black;
-            gdImageSetPixel(img, x, y, color);
+void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, int* colors, char *filename)
+{
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            if (matrix[y][x] == 1)
+            {
+                gdImageSetPixel(img, x, y, colors[1]);
+            }
+            else
+            {
+                gdImageSetPixel(img, x, y, colors[0]);
+            }
         }
     }
+
+    // Salva l'immagine
+    FILE *out = fopen(filename, "wb");
+    gdImageJpeg(img, out, -1);
+    fclose(out);
 }
 
-void createImage(gdImagePtr img, int width, int height, cell** matrix, char* filename) {
-    int black = gdImageColorAllocate(img, 0, 0, 0);
-    int red = gdImageColorAllocate(img, 255, 0, 0);
-
-    for (int y = 0; y<height; y++) {
-        for (int x = 0; x < width; x++) {
-            if (matrix[y][x].value == 1) {
-                gdImageSetPixel(img, x, y, black);
-            } else if (matrix[y][x].value > 1){
-                gdImageSetPixel(img, x, y, red);
+void createImage(gdImagePtr img, int width, int height, cell **matrix, char *filename, int *colors)
+{
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            if (matrix[y][x].value == 1)
+            {
+                gdImageSetPixel(img, x, y, colors[0]);
+            }
+            else if (matrix[y][x].value > 1)
+            {
+                gdImageSetPixel(img, x, y, colors[1]);
             }
         }
     }
     FILE *out = fopen(filename, "wb");
     gdImageBmp(img, out, -1);
-    fclose(out);
-}
-
-void saveImage(gdImagePtr img, char* filename){
-    // Salva l'immagine
-    FILE *out = fopen(filename, "wb");
-    gdImageJpeg(img, out, -1);
     fclose(out);
 }

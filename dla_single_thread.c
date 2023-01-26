@@ -5,16 +5,9 @@
 #include <errno.h>
 #include "support_functions.c"
 
-#define ITERATIONS 1000
-
-
-// DA IMPLEMENTARE
-//  typedef int (*start_dla)(int  n, int m, int matrix[n][m], particle *p);
-//  typedef void (*move)(particle p);
-//  typedef int (*check_position)(int  n, int m, int matrix[n][m], particle *p);
 
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
-void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix);
+void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
 int check_position(int n, int m, int **matrix, particle *p);
 
 
@@ -46,11 +39,6 @@ int check_position(int n, int m, int **matrix, particle *p)
                 {
                     matrix[p->current_position->y][p->current_position->x] = 1;
                     p->stuck = 1;
-                    // p->path = (position *)realloc(p->path, sizeof(position) * (p->size_path + 1));
-                    // if (p->path == NULL)
-                    // {
-                    //     perror("Error reallocating memory");
-                    // }
                     return -1;
                 }
             }
@@ -93,18 +81,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 
         particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
-        particles_list[i].stuck = 0;
-
-        // allocate memory for particle path
-        // particles_list[i].path = malloc(sizeof(position) * ITERATIONS);
-        // if (particles_list[i].path == NULL)
-        // {
-        //     perror("Error allocating memory for paths. \n");
-        // }
-        // // set the first position of the path
-        // particles_list[i].path[0] = *particles_list[i].current_position;
-        // particles_list[i].size_path = 1;
-    }
+        particles_list[i].stuck = 0;    }
 }
 
 /*
@@ -124,10 +101,10 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 void start_DLA(int num_particles,
                particle *particles_list,
                int n, int m,
-               int **matrix)
+               int **matrix, int horizon)
 {
     printf("Starting DLA\n");
-    for (int t = 1; t < ITERATIONS; t++)
+    for (int t = 1; t < horizon; t++)
     {
         // Itero per particelle per ogni iterazione
         for (int i = 0; i < num_particles; i++)
@@ -154,16 +131,10 @@ int main(int argc, char *argv[])
 
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
-    int num_particles; // number of particles
+    int num_particles; // numero di particelle
+    int horizon;       // tempo di simulazione
 
-    get_args(argv, &num_particles, &n, &m, seed);
-    // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
-    // fflush(stdout);
-    // num_particles = 50;
-    // n = 10;
-    // m = 10;
-    // seed[0] = 50;
-    // seed[1] = 50;
+    get_args(argc, argv, &num_particles, &n, &m, seed, &horizon);
 
     printf("seed %d, %d\n", seed[0], seed[1]);
 
@@ -185,25 +156,28 @@ int main(int argc, char *argv[])
     if (particles_list == NULL)
         perror("Error allocating memory");
 
-    srand(856); // set seed for random
+    srand(seed_rand); // set seed for random
+
     // create particles
     gen_particles(seed, num_particles, particles_list, n, m);
 
-    time_t start = time(NULL);
+    clock_t start = clock();
+
     // start DLA
-    start_DLA(num_particles, particles_list, n, m, matrix);
+    start_DLA(num_particles, particles_list, n, m, matrix, horizon);
 
-    time_t end = time(NULL);
-    printf("time: %ld\n", (end - start));
-    // -----SAVE DATA----- //
-    // save matrix
-    //write_matrix(n, m, matrix);
+    clock_t end = clock() ;
+    printf("time: %f\n", (double)((end - start)/CLOCKS_PER_SEC));
 
-    // save paths
-    //write_paths(num_particles, particles_list);
+    FILE* elapsed_time = fopen("elapsed_time.txt", "a");
+    fprintf(elapsed_time, "%f\n", (double)((end - start)/CLOCKS_PER_SEC));
+    fclose(elapsed_time);
+
     gdImagePtr img = gdImageCreate(m, n); 
-    createImage_intMatrix(img, n, m, matrix);
-    saveImage(img, "matrix_single_thread.png");
+    int colors[2];
+    colors[0] = gdImageColorAllocate(img, 255, 255, 255); // white
+    colors[1] = gdImageColorAllocate(img, 0, 0, 0); // black
+    createImage_intMatrix(img, m,n, matrix, colors, "DLA.png");
 
     // -----FINALIZE----- //
 
@@ -223,8 +197,6 @@ int main(int argc, char *argv[])
     {
         if (particles_list[i].current_position != NULL)
             free(particles_list[i].current_position);
-        // if (particles_list[i].path != NULL)
-        //     free(particles_list[i].path);
     }
     printf("particles's path and current_position, ");
 

@@ -19,10 +19,7 @@ char filename[32];
 
 // gd variables
 gdImagePtr p_img;
-#define white gdImageColorAllocate(p_img, 255, 255, 255)
-#define black gdImageColorAllocate(p_img, 0, 0, 0)
-#define red gdImageColorAllocate(p_img, 255, 0, 0)
-
+int white;
 int colors[2];
 
 void *start_DLA_parallel(void *rank);
@@ -210,6 +207,9 @@ int main(int argc, char *argv[])
 
     // create image
     p_img = gdImageCreate(m, n);
+    white = gdImageColorAllocate(p_img, 255, 255, 255);
+    int black = gdImageColorAllocate(p_img, 0, 0, 0);
+    int red = gdImageColorAllocate(p_img, 255, 0, 0);
     // assign colors
     colors[0] = black;
     colors[1] = red;

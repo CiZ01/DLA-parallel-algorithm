@@ -9,7 +9,6 @@
 #include <time.h>
 #include "support_functions.c"
 
-
 int num_threads;
 int n, m, num_particles, horizon;
 int seed[2];
@@ -76,7 +75,17 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
         return 0;
     }
 
-    if (matrix[p->current_position->y][p->current_position->x].value >= 2){
+    if (p->stuck == -1)
+    {
+        pthread_mutex_lock(&matrix[p->current_position->y][p->current_position->x].mutex);
+        matrix[p->current_position->y][p->current_position->x].value = 1;
+        pthread_mutex_unlock(&matrix[p->current_position->y][p->current_position->x].mutex);
+        p->stuck = 1;
+        return -1;
+    }
+
+    if (matrix[p->current_position->y][p->current_position->x].value >= 2)
+    {
         matrix[p->current_position->y][p->current_position->x].value -= 2;
     }
 
@@ -90,10 +99,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
         {
             if (matrix[near_y][near_x].value == 1)
             {
-                pthread_mutex_lock(&matrix[p->current_position->y][p->current_position->x].mutex);
-                matrix[p->current_position->y][p->current_position->x].value = 1;
-                pthread_mutex_unlock(&matrix[p->current_position->y][p->current_position->x].mutex);
-                p->stuck = 1;
+                p->stuck = -1;
                 return -1;
             }
         }
@@ -121,13 +127,13 @@ void *start_DLA_parallel(void *rank)
 
     printf("%d.Starting DLA\n", (int)my_rank);
 
-    for (int t = 0; t < horizon; t++)
+    for (int t = 0; t < horizon + 1; t++)
     {
         // Itero per particelle per ogni iterazione
         for (int i = 0; i < my_num_particles; i++)
         {
             particle *p = &my_particles_list[i];
-            if (p->stuck == 0)
+            if (p->stuck <= 0)
             {
                 int isStuck = check_position_parallel(n, m, matrix, p);
                 if (isStuck == 0)
@@ -197,13 +203,14 @@ int main(int argc, char *argv[])
     char filename[100];
     sprintf(filename, "DLA_%d_%d_%d_%d_%d.png", n, m, num_particles, num_threads, horizon);
     p_img = gdImageCreate(m, n);
+    int white = gdImageColorAllocate(p_img, 255, 255, 255);
+    gdImageFill(p_img, 0, 0, white);
     int black = gdImageColorAllocate(p_img, 0, 0, 0);
     int red = gdImageColorAllocate(p_img, 255, 0, 0);
     int colors[] = {black, red};
 
     printf("Creating image... \n");
     createImage(p_img, m, n, matrix, filename, colors);
-
 
     printf("Elapsed time: %f seconds \n", (double)((end - start)));
 
