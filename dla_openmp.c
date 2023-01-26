@@ -24,6 +24,10 @@ int thread_count;
  */
 int check_position(int n, int m, int **matrix, particle *p)
 {
+    if (p->isOut == 1)
+    {
+        return 0;
+    }
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
     
     for (int i = 0; i < 8; i += 2)
@@ -110,12 +114,12 @@ void start_DLA(int num_particles,
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
-            if (p->stuck == 0 && p->isOut == 0)
+            if (p->stuck == 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    move_parallel(p);
+                    move_parallel(p, n, m);
                 }
             }
         }
