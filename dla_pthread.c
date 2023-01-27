@@ -6,14 +6,14 @@
 #include <time.h>
 #include <errno.h>
 #include <pthread.h>
-#include <time.h>
+#include <sys/time.h>
 #include "support_functions.c"
+#include "timer.h"
 
 int num_threads;
 int n, m, num_particles, horizon;
 int seed[2];
 cell **matrix;
-unsigned int rand_seed;
 pthread_barrier_t barrier;
 
 gdImagePtr p_img;
@@ -49,13 +49,13 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
 
         do
         {
-            my_particles_list[i].current_position->x = rand_r(&rand_seed) % m;
-            my_particles_list[i].current_position->y = rand_r(&rand_seed) % n;
+            my_particles_list[i].current_position->x = rand_r(&gen_rand) % m;
+            my_particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == my_particles_list[i].current_position->x && seed[1] == my_particles_list[i].current_position->y);
 
-        my_particles_list[i].vel = rand_r(&rand_seed) % 10;
-        my_particles_list[i].dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
+        my_particles_list[i].vel = rand_r(&gen_rand) % 10;
+        my_particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         my_particles_list[i].stuck = 0;
         my_particles_list[i].isOut = 0;
     }
@@ -160,6 +160,10 @@ void *start_DLA_parallel(void *rank)
 
 int main(int argc, char *argv[])
 {
+    double start_s, end_s, elapsed_s;
+    double start, end, elapsed;
+
+    GET_TIME(start_s);
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
@@ -186,9 +190,7 @@ int main(int argc, char *argv[])
 
     thread_handles = (pthread_t *)malloc(num_threads * sizeof(pthread_t));
 
-    rand_seed = (unsigned int)856;
-
-    clock_t start = clock();
+    GET_TIME(start);
 
     for (thread = 0; thread < num_threads; thread++)
         pthread_create(&thread_handles[thread], NULL, start_DLA_parallel, (void *)thread);
@@ -196,9 +198,10 @@ int main(int argc, char *argv[])
     for (thread = 0; thread < num_threads; thread++)
         pthread_join(thread_handles[thread], NULL);
 
-    clock_t end = clock();
+    GET_TIME(end);
 
-    double elapsed = (double)((end - start) / CLOCKS_PER_SEC)/num_threads;
+    elapsed = (double)(end - start);
+
     printf("Elapsed time: %f seconds \n", elapsed);
 
     FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
@@ -245,5 +248,10 @@ int main(int argc, char *argv[])
         free(thread_handles); // Libera la lista dei threads
     printf("thread_handles \n");
 
+
+    GET_TIME(end_s);
+
+    elapsed_s = (double)((end_s - start_s));
+    printf("total: %f, T_s: %f \n", elapsed_s, (double)(elapsed_s - elapsed));
     return 0;
 }

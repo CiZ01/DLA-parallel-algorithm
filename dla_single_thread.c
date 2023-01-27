@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <errno.h>
 #include "support_functions.c"
+#include "timer.h"
 
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
@@ -134,6 +134,8 @@ int main(int argc, char *argv[])
     int num_particles; // numero di particelle
     int horizon;       // tempo di simulazione
 
+    double start, end, elapsed;
+
     get_args(argc, argv, &num_particles, &n, &m, seed, &horizon);
 
     printf("seed %d, %d\n", seed[0], seed[1]);
@@ -156,19 +158,19 @@ int main(int argc, char *argv[])
     if (particles_list == NULL)
         perror("Error allocating memory");
 
-    int seed_rand = time(NULL);
     srand(seed_rand); // set seed for random
 
     // create particles
     gen_particles(seed, num_particles, particles_list, n, m);
 
-    clock_t start = clock();
+    GET_TIME(start);
 
     // start DLA
     start_DLA(num_particles, particles_list, n, m, matrix, horizon);
 
-    clock_t end = clock();
-    double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
+    GET_TIME(end);
+
+    elapsed = (double)(end - start);
     printf("time: %f\n", elapsed);
 
     FILE *elapsed_time = fopen("./times/time_dla_single_thread.txt", "a");

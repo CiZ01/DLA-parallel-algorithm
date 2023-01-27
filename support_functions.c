@@ -12,7 +12,8 @@
 #define HORIZON 1000
 
 unsigned int gen_rand = 586761;
-int seed_rand = 2;
+int seed_rand = 586761;
+
 
 typedef struct
 {
@@ -45,6 +46,8 @@ void print_matrix(int n, int m, int **matrix);
 void move(particle *p, int n, int m);
 void move_parallel(particle *part, int n, int m);
 void move_pthread(particle *p, cell **matrix, int n, int m);
+double get_time(void);
+
 
 void write_matrix(int n, int m, int **matrix)
 {

@@ -169,11 +169,11 @@ int main(int argc, char *argv[])
     gen_particles(seed, num_particles, particles_list, n, m);
 
     // start DLA
-    clock_t start = clock();
+    double start = omp_get_wtime();
     start_DLA(num_particles, particles_list, n, m, matrix, horizon);
-    clock_t end = clock();
+    double end = omp_get_wtime();
 
-    double elapsed = (double)((end - start) / CLOCKS_PER_SEC)/thread_count;
+    double elapsed = (double)(end - start);
     
     printf("il tempo impiegato per il DLA è: %f \n", elapsed);
 
@@ -181,8 +181,6 @@ int main(int argc, char *argv[])
     fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
     // -----SAVE DATA----- //
-    // save matrix
-    write_matrix(n, m, matrix);
 
     img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
