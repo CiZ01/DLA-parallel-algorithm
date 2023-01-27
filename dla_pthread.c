@@ -13,7 +13,6 @@ int num_threads;
 int n, m, num_particles, horizon;
 int seed[2];
 cell **matrix;
-unsigned int rand_seed;
 pthread_barrier_t barrier;
 
 gdImagePtr p_img;
@@ -49,13 +48,13 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
 
         do
         {
-            my_particles_list[i].current_position->x = rand_r(&rand_seed) % m;
-            my_particles_list[i].current_position->y = rand_r(&rand_seed) % n;
+            my_particles_list[i].current_position->x = rand_r(&gen_rand) % m;
+            my_particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == my_particles_list[i].current_position->x && seed[1] == my_particles_list[i].current_position->y);
 
-        my_particles_list[i].vel = rand_r(&rand_seed) % 10;
-        my_particles_list[i].dire = rand_r(&rand_seed) % 2 == 0 ? 1 : -1;
+        my_particles_list[i].vel = rand_r(&gen_rand) % 10;
+        my_particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         my_particles_list[i].stuck = 0;
         my_particles_list[i].isOut = 0;
     }
@@ -135,9 +134,9 @@ void *start_DLA_parallel(void *rank)
                 {
                     if (t < horizon)
                         move_parallel(p, n, m);
-                    else if (p->isOut == 0 )
+                    else if (p->isOut == 0)
                         matrix[p->current_position->y][p->current_position->x].value += 2;
-                }   
+                }
             }
         }
         // BARRIER
@@ -186,7 +185,7 @@ int main(int argc, char *argv[])
 
     thread_handles = (pthread_t *)malloc(num_threads * sizeof(pthread_t));
 
-    rand_seed = (unsigned int)856;
+    gen_rand = (unsigned int)856;
 
     clock_t start = clock();
 
@@ -198,7 +197,7 @@ int main(int argc, char *argv[])
 
     clock_t end = clock();
 
-    double elapsed = (double)((end - start) / CLOCKS_PER_SEC)/num_threads;
+    double elapsed = (double)((end - start) / CLOCKS_PER_SEC) / num_threads;
     printf("Elapsed time: %f seconds \n", elapsed);
 
     FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
@@ -216,7 +215,6 @@ int main(int argc, char *argv[])
 
     printf("Creating image... \n");
     createImage(p_img, m, n, matrix, filename, colors);
-
 
     // -----FINALIZE----- //
 
