@@ -120,9 +120,12 @@ void start_DLA(int num_particles,
             if (p->stuck <= 0)
             {
                 int isStuck = check_position(n, m, matrix, p);
-                if (isStuck == 0 && t < horizon)
+                if (isStuck == 0)
                 {
-                    move_parallel(p, n, m);
+                    if (t < horizon)
+                        move_parallel(p, n, m);
+                    else if (p->isOut == 0)
+                        matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
         }
@@ -141,13 +144,7 @@ int main(int argc, char *argv[])
 
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
-    // printf("num_particles: %d, n: %d, m: %d, seed: %d, %d\n", num_particles, n, m, seed[0], seed[1]);
-    // fflush(stdout);
-    // num_particles = 50;
-    // n = 10;
-    // m = 10;
-    // seed[0] = 50;
-    // seed[1] = 50;
+
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     int **matrix;
@@ -188,6 +185,9 @@ int main(int argc, char *argv[])
     write_matrix(n, m, matrix);
 
     img = gdImageCreate(m, n);
+    int white = gdImageColorAllocate(img, 255, 255, 255);
+    gdImageFilledRectangle(img, 0, 0, m, n, white);
+    
     int black = gdImageColorAllocate(img, 0, 0, 0);
     int red = gdImageColorAllocate(img, 255, 0, 0);
 

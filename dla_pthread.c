@@ -84,11 +84,6 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
         return -1;
     }
 
-    if (matrix[p->current_position->y][p->current_position->x].value >= 2)
-    {
-        matrix[p->current_position->y][p->current_position->x].value -= 2;
-    }
-
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
     for (int i = 0; i < 8; i += 2)
@@ -138,8 +133,11 @@ void *start_DLA_parallel(void *rank)
                 int isStuck = check_position_parallel(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    move_pthread(p, matrix, n, m);
-                }
+                    if (t < horizon)
+                        move_parallel(p, n, m);
+                    else if (p->isOut == 0 )
+                        matrix[p->current_position->y][p->current_position->x].value += 2;
+                }   
             }
         }
         // BARRIER

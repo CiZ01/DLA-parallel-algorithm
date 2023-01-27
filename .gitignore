@@ -3,7 +3,6 @@
 *.exe
 .git
 *.out
-imgs
 *.jpg
 *.png
 *.gif
@@ -13,4 +12,4 @@ imgs
 paths.txt
 matrix.txt
 __pycache__
-output/
+output
