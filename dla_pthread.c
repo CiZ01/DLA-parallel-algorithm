@@ -135,9 +135,9 @@ void *start_DLA_parallel(void *rank)
                 {
                     if (t < horizon)
                         move_parallel(p, n, m);
-                    else if (p->isOut == 0 )
+                    else if (p->isOut == 0)
                         matrix[p->current_position->y][p->current_position->x].value += 2;
-                }   
+                }
             }
         }
         // BARRIER
@@ -190,7 +190,13 @@ int main(int argc, char *argv[])
 
     thread_handles = (pthread_t *)malloc(num_threads * sizeof(pthread_t));
 
+<<<<<<< HEAD
     GET_TIME(start);
+=======
+    gen_rand = (unsigned int)856;
+
+    clock_t start = clock();
+>>>>>>> 909873870863b80772c6211b7d38f106c6894171
 
     for (thread = 0; thread < num_threads; thread++)
         pthread_create(&thread_handles[thread], NULL, start_DLA_parallel, (void *)thread);
@@ -202,6 +208,10 @@ int main(int argc, char *argv[])
 
     elapsed = (double)(end - start);
 
+<<<<<<< HEAD
+=======
+    double elapsed = (double)((end - start) / CLOCKS_PER_SEC) / num_threads;
+>>>>>>> 909873870863b80772c6211b7d38f106c6894171
     printf("Elapsed time: %f seconds \n", elapsed);
 
     FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
@@ -219,7 +229,6 @@ int main(int argc, char *argv[])
 
     printf("Creating image... \n");
     createImage(p_img, m, n, matrix, filename, colors);
-
 
     // -----FINALIZE----- //
 

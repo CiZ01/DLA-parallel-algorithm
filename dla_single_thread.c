@@ -115,7 +115,7 @@ void start_DLA(int num_particles,
                 int isStuck = check_position(n, m, matrix, p);
                 if (isStuck == 0)
                 {
-                    if ( t < horizon)
+                    if (t < horizon)
                         move(p, n, m);
                     else if (p->isOut == 0)
                         matrix[p->current_position->y][p->current_position->x] += 2;
@@ -183,8 +183,8 @@ int main(int argc, char *argv[])
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);
     int colors[2];
-    colors[0] = gdImageColorAllocate(img, 0,0,0); // black
-    colors[1] = gdImageColorAllocate(img, 255, 0, 0);       // red
+    colors[0] = gdImageColorAllocate(img, 0, 0, 0);   // black
+    colors[1] = gdImageColorAllocate(img, 255, 0, 0); // red
     createImage_intMatrix(img, m, n, matrix, colors, "DLA.jpg");
 
     // -----FINALIZE----- //

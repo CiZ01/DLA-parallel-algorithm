@@ -13,7 +13,10 @@
 
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
+<<<<<<< HEAD
 
+=======
+>>>>>>> 909873870863b80772c6211b7d38f106c6894171
 
 typedef struct
 {
@@ -200,7 +203,6 @@ void move(particle *p, int n, int m)
     p->dire = rand() % 2 == 0 ? 1 : -1;
     p->current_position->y += rand() % 2 * p->dire;
 
-    
     if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
     {
         p->isOut = 1;
@@ -281,7 +283,7 @@ void write_matrix_cell(int n, int m, cell **matrix)
         perror("Error closing file");
 }
 
-void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, int* colors, char *filename)
+void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename)
 {
     for (int y = 0; y < height; y++)
     {
@@ -293,7 +295,7 @@ void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, 
             }
             else if (matrix[y][x] > 1)
             {
-                gdImageSetPixel(img, x, y, colors[1]); //set red
+                gdImageSetPixel(img, x, y, colors[1]); // set red
             }
         }
     }

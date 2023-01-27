@@ -17,7 +17,8 @@ def run_test(configurations: list) -> tuple:
             args = f"{n},{m}|{num_particles}|-n{num_threads}|-t{iters}|-s{n//2},{m//2}".split(
                 "|")
         else:
-            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//2},{m//2}".split("|")
+            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//2},{m//2}".split(
+                "|")
 
         cmd_running = [f"./{exe}.out"] + args
 
@@ -62,7 +63,8 @@ def main():
     code, i = run_test(configurations)
     if code != 0:
         print(
-            f"Errore {code} durante l'esecuzione del test {i} \n {configurations[i]}")
+            f"Errore {code} durante l'esecuzione del test {i} \n {configurations[i]}"
+        )
         return
     print(times)
     with open(f"./times/history.txt", "a") as f:
