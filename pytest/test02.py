@@ -2,22 +2,30 @@
 
 import subprocess
 #import myplot as plot
+from decouple import config
+import keyring
+
+from knockknock import email_sender
 
 EXE_FILENAMES = ("dla_single_thread", "dla_pthread", "dla_openmp")
-numTests = 10
+numTests = 5
 times = []
+
+sender = config('SENDER')
+receiver = config('RECEIVER')
+psswd = config('PASSWORD')
 
 
 def run_test(configurations: list) -> tuple:
-    totalTime = 0
     for config in configurations:
+        totalTime = 0
         n, m, num_particles, num_threads, iters, exe = config
 
         if num_threads > 0 and exe != "dla_single_thread":
-            args = f"{n},{m}|{num_particles}|-n{num_threads}|-t{iters}|-s{n//2},{m//2}".split(
+            args = f"{n},{m}|{num_particles}|-n{num_threads}|-t{iters}|-s{n//4},{m//4}".split(
                 "|")
         else:
-            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//2},{m//2}".split(
+            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//4},{m//4}".split(
                 "|")
 
         cmd_running = [f"./{exe}.out"] + args
@@ -44,22 +52,23 @@ def run_test(configurations: list) -> tuple:
     return 0, 0
 
 
+#@email_sender(recipient_emails=[receiver], sender_email=sender)
 def main():
-
     for i in range(3):
         with open(f"times/time_{EXE_FILENAMES[i]}.txt", "w") as f:
             f.write("")
 
     configurations = [
         # (n, m, num_particles, num_threads, iters, filename)
-        (1000, 1000, 300000, 0, 1000, EXE_FILENAMES[0]),
-        (1000, 1000, 300000, 4, 1000, EXE_FILENAMES[1]),
-        (1000, 1000, 300000, 4, 1000, EXE_FILENAMES[2]),
-        (1000, 1000, 300000, 8, 1000, EXE_FILENAMES[1]),
-        (1000, 1000, 300000, 8, 1000, EXE_FILENAMES[2]),
-        (1000, 1000, 300000, 16, 1000, EXE_FILENAMES[1]),
-        (1000, 1000, 300000, 16, 1000, EXE_FILENAMES[2]),
+        (1000, 1000, 400000, 0, 10000, 'dla_single_thread'),
+        (1000, 1000, 400000, 4, 10000, 'dla_pthread'),
+        (1000, 1000, 400000, 4, 10000, 'dla_openmp'),
+        (1000, 1000, 400000, 8, 10000, 'dla_pthread'),
+        (1000, 1000, 400000, 8, 10000, 'dla_openmp'),
+        (1000, 1000, 400000, 16, 10000, 'dla_pthread'),
+        (1000, 1000, 400000, 16, 10000, 'dla_openmp')
     ]
+
     code, i = run_test(configurations)
     if code != 0:
         print(

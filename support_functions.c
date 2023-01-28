@@ -13,10 +13,6 @@
 
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
-<<<<<<< HEAD
-
-=======
->>>>>>> 909873870863b80772c6211b7d38f106c6894171
 
 typedef struct
 {
@@ -50,7 +46,6 @@ void move(particle *p, int n, int m);
 void move_parallel(particle *part, int n, int m);
 void move_pthread(particle *p, cell **matrix, int n, int m);
 double get_time(void);
-
 
 void write_matrix(int n, int m, int **matrix)
 {
