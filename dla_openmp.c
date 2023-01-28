@@ -66,7 +66,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         perror("Too many particles for the matrix size. \n");
     }
     int i = 0;
-    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list) private(i)
+    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -113,7 +113,7 @@ void start_DLA(int num_particles,
     {
         // Itero per particelle per ogni iterazione
         int i;
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix) private(i)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
