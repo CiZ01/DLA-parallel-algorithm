@@ -13,10 +13,6 @@
 
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
-<<<<<<< HEAD
-
-=======
->>>>>>> 909873870863b80772c6211b7d38f106c6894171
 
 typedef struct
 {
