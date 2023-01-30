@@ -87,7 +87,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedPar
         {
             if (matrix[near_y][near_x].value == 1)
             {
-                if(sp_append(sp, p) != 0)
+                if(sp_append(sp, *p) != 0)
                 {
                     perror("Error nell'append della stuckedParticles list. \n");
                     exit(1);
@@ -114,7 +114,7 @@ void *start_DLA_parallel(void *rank)
     stuckedParticles stucked_particles; // lista di particelle bloccate
     
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, (int)coefficent+my_rank) != 0)
+    if (init_StuckedParticles(&stucked_particles, (int)coefficent) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -151,8 +151,7 @@ void *start_DLA_parallel(void *rank)
         pthread_barrier_wait(&barrier);
         while (stucked_particles.size > 0)
         {
-            particle p;
-            sp_pop(&stucked_particles, &p);
+            particle p = sp_pop(&stucked_particles);
             matrix[p.current_position->y][p.current_position->x].value = 1;
         }
         pthread_barrier_wait(&barrier);
@@ -168,6 +167,13 @@ void *start_DLA_parallel(void *rank)
     }
     if (my_particles_list != NULL)
         free(my_particles_list);
+
+    if (sp_destroy(&stucked_particles) != 0)
+    {
+        perror("Error nella distruzione della stuckedParticles list. \n");
+        exit(1);
+    }
+
     printf("%ld.Finished DLA \n", my_rank);
     return NULL;
 }
@@ -179,7 +185,7 @@ int main(int argc, char *argv[])
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
     // da calibrare
-    coefficent = (num_particles * horizon) / (n * m);
+    coefficent = ((num_particles * horizon) / (n * m))*(0.2/num_threads);
 
     matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
@@ -190,8 +196,6 @@ int main(int argc, char *argv[])
         matrix[i] = (cell *)malloc(m * sizeof(cell)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
             perror("Error allocating memory");
-        if (pthread_mutex_init(&matrix[i]->mutex, NULL))
-            perror("Error initializing mutex");
         matrix[i]->value = 0;
     }
 
@@ -242,13 +246,13 @@ int main(int argc, char *argv[])
         if (matrix[i] != NULL)
         {
             free(matrix[i]);                          // Libera la memoria della riga i-esima
-            pthread_mutex_destroy(&matrix[i]->mutex); // Distrugge il mutex
         }
     }
 
     printf("matrix, mutex, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
+
 
     if (p_img != NULL)
         gdImageDestroy(p_img); // Libera la memoria dell'immagine
