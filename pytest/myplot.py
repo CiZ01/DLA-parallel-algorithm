@@ -31,11 +31,12 @@ def calc_value():
 
 
 def getPlot(elapsedTimes: list, args: tuple[str]):
+    #SPEEDUP
     speedup = np.array([])
     for time in elapsedTimes:
         speedup = np.append(speedup, np.array(
             [round(time[0]/data, 4) for data in time[1:]]))
-    num_particles = [config[2] for config in args]
+        
     percent = [int(config[2]/(config[0]*config[1])*100) for config in args]
     plt.figure(figsize=(10, 8))
     x_pos = np.array([config[2] for config in args[1:-1]])
@@ -60,22 +61,79 @@ def getPlot(elapsedTimes: list, args: tuple[str]):
 
 def getBar(configurations : list, single_times: list, pthread_times: list, openmp_times: list):
 
-        x = np.array([config[2] for config in configurations])
-        s_time = np.array([time[0] for time in single_times])
-        p_time = np.array([time[0] for time in pthread_times])
-        o_time = np.array([time[0] for time in openmp_times])
+	x = np.array([config[2] for config in configurations])
+	s_time = np.array([time[0] for time in single_times])
+	p_time = np.array([time[0] for time in pthread_times])
+	o_time = np.array([time[0] for time in openmp_times])
+
+	offset = 0.2
+	for i in range(0, len(2)):
+			#single
+			plt.bar(x-offset, s_time[i])
+			#pthread
+			plt.bar(x, p_time[i])
+			#openmp
+			plt.bar(x+offset, o_time[i])
+			
+	plt.savefig('test_bar.png')
+	return
+
+def inList(s : str):
+    s = s.replace('\t', ' ')
+    s = s.replace(',', '.')
+    s = ' '.join(s.split())
+    speedup = [float(y) for y in s.split(' ')]
+    p4, p8, p16, o4, o8, o16 = [],[],[],[],[],[]
+    for i in range(0, len(speedup), 6):
+        p4.append(speedup[i])
+        o4.append(speedup[i+1])
+        p8.append(speedup[i+2])
+        o8.append(speedup[i+3])
+        p16.append(speedup[i+4])
+        o16.append(speedup[i+5])
         
-        offset = 0.2
-        for i in range(0, len(2)):
-                #single
-                plt.bar(x-offset, s_time[i])
-                #pthread
-                plt.bar(x, p_time[i])
-                #openmp
-                plt.bar(x+offset, o_time[i])
-                
-        plt.savefig('test_bar.png')
-        return
+    speedup = [p4, o4, p8, o8, p16, o16]
+    return speedup
+
+
+def getPlot2(speedup : list , x_pos : list, percent : list):
+    speedup_np = np.array(speedup)
+    print(speedup_np)
+    m = int(np.max(speedup_np))
+    y_pos = np.arange(m-0.1, m+1, 0.05)
+    x_pos_np = np.array(x_pos)
+	
+	
+    _, ax = plt.subplots()
+ 
+    #p4
+    plt.plot(x_pos, speedup_np[0], marker='o', color='b') 
+    #o4
+    plt.plot(x_pos, speedup_np[1], marker='o', color='r')
+    #p8
+    plt.plot(x_pos, speedup_np[2], marker='o', color='g')
+    #o8
+    plt.plot(x_pos, speedup_np[3], marker='o', color='y')
+    #p16
+    plt.plot(x_pos, speedup_np[4], marker='o', color='c')
+    #o16
+    plt.plot(x_pos, speedup_np[5], marker='o', color='m')
+        
+    
+    
+    plt.xticks(x_pos, fontsize=8, ha='center')
+    plt.yticks(y_pos, fontsize=8)
+    
+    plt.legend(['pthread 4 threads', 'openMP 4 threads',
+                'pthread 8 threads', 'openMP 8 threads',
+                'pthread 16 threads', 'openMP 16 threads'])
+
+    plt.ylabel('Speedup')
+    plt.xlabel('Numero di particelle')
+    plt.title('DLA \n Speedup in funzione al numero di particelle')
+    plt.savefig('test_plot.png')
+    return
+
 
 if __name__ == '__main__':
     configurations = [
@@ -95,29 +153,10 @@ if __name__ == '__main__':
         (100, 100, 700, 16, 1000, EXE_FILENAMES[1]),
         (100, 100, 700, 16, 1000, EXE_FILENAMES[2]),
     ]
-    times = [0.04, 0.04, 0.04, 0.02, 0.08, 0.05, 0.11,
-             0.22, 0.11, 0.15, 0.12, 0.16, 0.13, 0.17]
-    times_config = tuple([tuple(times[:7]), tuple(times[7:])])
-    print(times_config)
-#     getPlot(
-        # times_config,
-        # configurations
-#     )
-    
-    single_times, pthread_times, openmp_times = [], [], []
-    
-    for i in range(0, len(times)):
-        if configurations[i][-1] == 'dla_single_thread':
-                single_times.append((times[i], configurations[i][2]))
-        elif configurations[i][-1] == 'dla_pthread':
-                pthread_times.append((times[i], configurations[i][2],  configurations[i][3]))
-        else:
-                openmp_times.append((times[i], configurations[i][2],  configurations[i][3]))
-    
-    s = ""
-    c =  [73.95, 118.72, 148.87, 113.53, 141.57, 125.68, 147.69, 328.45, 209.75, 238.57, 238.93, 270.59, 270.77, 300.42] 
-    for i in c:
-            s += f"{i} "
-    print(s)
-    #getBar(configurations, single_times, pthread_times, openmp_times)
+	
+    s = '2,22	2,12	2,35	2,33	2,35	2,28 2,42	2,48	2,43	2,48	2,42	2,44 2,40	2,55	2,38	2,48	2,38	2,51 2,21	2,49	2,11	2,45	2,18	2,38 2,15	2,53	1,93	2,53	2,02	2,48'
+    speedup = inList(s)
+    num_p = [i*100000 for i in range(1,10,2)]
+    getPlot2(speedup, num_p, [])
+	
     pass
