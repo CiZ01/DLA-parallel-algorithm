@@ -10,17 +10,16 @@
 
 int num_threads; // numero di thread
 int n, m, num_particles, horizon;
-int seed[2]; // seed
-cell **matrix; // matrice di punttori a celle
-pthread_barrier_t barrier; //barriera per sincronizzare i thread
-
+int seed[2];               // seed
+cell **matrix;             // matrice di punttori a celle
+pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
 float coefficent; // coefficiente di aggregazione
 
 gdImagePtr p_img; // puntatore all'immagine
 
 void *start_DLA_parallel(void *rank);
-int check_position_parallel(int n, int m, cell **matrix, particle *p);
+int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedParticles *sp);
 void gen_particles_parallel(int *seed, int my_num_particles, particle *my_particles_list, int n, int m);
 
 /*
@@ -49,7 +48,7 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
             exit(1);
         }
 
-        // genera una posizione casuale per la particella, 
+        // genera una posizione casuale per la particella,
         // se la posizione è già occupata dal seme genera una nuova posizione
         do
         {
@@ -71,20 +70,11 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata e quessto
  * lo fa all'iterazione successiva per non interferire con le altre particelle.
  */
-int check_position_parallel(int n, int m, cell **matrix, particle *p)
+int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedParticles *sp)
 {
     if (p->isOut == 1)
     {
         return 0;
-    }
-
-    if (p->stuck == -1)
-    {
-        pthread_mutex_lock(&matrix[p->current_position->y][p->current_position->x].mutex);
-        matrix[p->current_position->y][p->current_position->x].value = 1;
-        pthread_mutex_unlock(&matrix[p->current_position->y][p->current_position->x].mutex);
-        p->stuck = 1;
-        return -1;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
@@ -97,7 +87,12 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
         {
             if (matrix[near_y][near_x].value == 1)
             {
-                p->stuck = -1;
+                if(sp_append(sp, p) != 0)
+                {
+                    perror("Error nell'append della stuckedParticles list. \n");
+                    exit(1);
+                }
+                p->stuck = 1;
                 return -1;
             }
         }
@@ -114,19 +109,25 @@ void *start_DLA_parallel(void *rank)
         my_num_particles += num_particles % num_threads;
     }
 
+    printf("%d.Starting DLA\n", (int)my_rank);
+    
     stuckedParticles stucked_particles; // lista di particelle bloccate
+    
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, coefficent) == 0)
+    if (init_StuckedParticles(&stucked_particles, (int)coefficent+my_rank) != 0)
+    {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
-
+        exit(1);
+    }
+   
     // create particles
     particle *my_particles_list = (particle *)malloc(sizeof(particle) * my_num_particles);
     if (my_particles_list == NULL)
+    {
         perror("Error allocating memory for particles. \n");
-
+        exit(1);
+    }
     gen_particles_parallel(seed, my_num_particles, my_particles_list, n, m);
-
-    printf("%d.Starting DLA\n", (int)my_rank);
 
     for (int t = 0; t < horizon + 1; t++)
     {
@@ -134,9 +135,9 @@ void *start_DLA_parallel(void *rank)
         for (int i = 0; i < my_num_particles; i++)
         {
             particle *p = &my_particles_list[i];
-            if (p->stuck <= 0)
+            if (p->stuck == 0)
             {
-                int isStuck = check_position_parallel(n, m, matrix, p);
+                int isStuck = check_position_parallel(n, m, matrix, p, &stucked_particles);
                 if (isStuck == 0)
                 {
                     if (t < horizon)
@@ -148,7 +149,12 @@ void *start_DLA_parallel(void *rank)
         }
         // BARRIER
         pthread_barrier_wait(&barrier);
-        // UPDATE
+        while (stucked_particles.size > 0)
+        {
+            particle p;
+            sp_pop(&stucked_particles, &p);
+            matrix[p.current_position->y][p.current_position->x].value = 1;
+        }
         pthread_barrier_wait(&barrier);
     }
 
@@ -169,13 +175,12 @@ void *start_DLA_parallel(void *rank)
 int main(int argc, char *argv[])
 {
     double start, end, elapsed;
-    
+
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
     // da calibrare
-    coefficent = (num_particles*horizon)/(n*m);
+    coefficent = (num_particles * horizon) / (n * m);
 
-    
     matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
         perror("Error allocating memory");

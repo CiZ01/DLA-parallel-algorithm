@@ -5,9 +5,12 @@
 #include "support_functions.c"
 #include "timer.h"
 
+
+stuckedParticles sp; // lista di particelle bloccate
+
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
-int check_position(int n, int m, int **matrix, particle *p);
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -16,19 +19,13 @@ int check_position(int n, int m, int **matrix, particle *p);
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
-int check_position(int n, int m, int **matrix, particle *p)
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
     if (p->isOut == 1)
     {
         return 0;
     }
 
-    if (p->stuck == -1)
-    {
-        matrix[p->current_position->y][p->current_position->x] = 1;
-        p->stuck = 1;
-        return -1;
-    }
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
 
     for (int i = 0; i < 8; i += 2)
@@ -39,7 +36,10 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                p->stuck = -1;
+                if(sp_append(sp, p) != 0){
+                    perror("Error appending particle to stuckedParticles list. \n");
+                }
+                p->stuck = 1;
                 return -1;
             }
         }
@@ -77,7 +77,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
 
-        particles_list[i].vel = rand() % 10;
         particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
         particles_list[i].isOut = 0;
@@ -112,7 +111,7 @@ void start_DLA(int num_particles,
             particle *p = &particles_list[i];
             if (p->stuck <= 0)
             {
-                int isStuck = check_position(n, m, matrix, p);
+                int isStuck = check_position(n, m, matrix, p, &sp);
                 if (isStuck == 0)
                 {
                     if (t < horizon)
@@ -121,6 +120,11 @@ void start_DLA(int num_particles,
                         matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
+        }
+        while(sp.size > 0){
+            particle p;
+            sp_pop(&sp, &p);
+            matrix[p.current_position->y][p.current_position->x] = 1;
         }
     }
     printf("Finished DLA\n");
@@ -153,6 +157,11 @@ int main(int argc, char *argv[])
     }
 
     matrix[seed[0]][seed[1]] = 1; // set seed
+
+    int coefficent = (int)(num_particles * horizon)/(n*m);
+
+    if(init_StuckedParticles(&sp, coefficent) != 0)
+        perror("Error allocating memory");
 
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
     if (particles_list == NULL)
