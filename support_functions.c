@@ -80,7 +80,6 @@ int init_StuckedParticles(stuckedParticles *sp, int capacity){
     }
     sp->size = 0;
     sp->capacity = capacity;
-    sp->last = sp->data;
     sp->coefficent = capacity;
     return 0;
 }
@@ -93,18 +92,17 @@ int sp_append(stuckedParticles *sp, particle *p){
         }
         sp->capacity = (int)sp->capacity+sp->coefficent;
     }
-    sp->last = p;
+    sp->data[sp->size+1] = *p;
     sp->size++;
+
     return 0;
 }
 
-int sp_remove(stuckedParticles *sp, particle *p){
+int sp_pop(stuckedParticles *sp, particle *p){
     if(sp->size == 0){
         return -1;
     }
-    p = sp->last;
-
-    sp->last = sp->last - sizeof(particle);
+    *p = sp->data[sp->size];
     sp->size--;
     return 0;
 }
