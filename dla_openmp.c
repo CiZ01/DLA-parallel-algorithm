@@ -7,8 +7,8 @@
 
 gdImagePtr img;
 
-int thread_count; // numero di thread
-float coefficent; // coefficiente di aggregazione
+int thread_count;  // numero di thread
+float coefficient; // coefficiente di aggregazione
 
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 
@@ -108,7 +108,7 @@ void start_DLA(int num_particles,
     stuckedParticles sp; // lista di particelle bloccate
 
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&sp, (int)coefficent) != 0)
+    if (init_StuckedParticles(&sp, (int)coefficient) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
 
-    coefficent = (num_particles * horizon) / (n * m);
+    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / thread_count;
 
     printf("seed %d, %d\n", seed[0], seed[1]);
 

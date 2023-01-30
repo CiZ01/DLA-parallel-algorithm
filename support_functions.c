@@ -10,6 +10,7 @@
 
 #define NUM_THREADS 4
 #define HORIZON 1000
+#define FACTOR 1.5
 
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
@@ -53,10 +54,10 @@ typedef struct
 
 typedef struct
 {
-    particle *data;   // array di particelle
-    int size;         // numero di particelle
-    int capacity;     // capacità massima dell'array
-    float coefficent; // coefficiente di reallocazione
+    particle *data;    // array di particelle
+    int size;          // numero di particelle
+    int capacity;      // capacità massima dell'array
+    float coefficient; // coefficiente di reallocazione
 } stuckedParticles;
 
 void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon);
@@ -81,7 +82,7 @@ int init_StuckedParticles(stuckedParticles *sp, int capacity)
     }
     sp->size = 0;
     sp->capacity = (int)capacity;
-    sp->coefficent = capacity;
+    sp->coefficient = capacity;
     return 0;
 }
 
@@ -89,12 +90,13 @@ int sp_append(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
     {
-        sp->data = (particle *)realloc(sp->data, (sp->capacity * 2) * sizeof(particle));
+        printf("reallocating memory \n");
+        sp->data = (particle *)realloc(sp->data, (int)(sp->capacity * 3) * sizeof(particle));
         if (sp->data == NULL)
         {
             return -1;
         }
-        sp->capacity = (int)sp->capacity * 2;
+        sp->capacity = (int)sp->capacity * 3;
     }
     sp->data[sp->size + 1] = p;
     sp->size++;

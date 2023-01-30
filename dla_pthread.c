@@ -14,7 +14,7 @@ int seed[2];               // seed
 cell **matrix;             // matrice di punttori a celle
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
-float coefficent; // coefficiente di aggregazione
+float coefficient; // coefficiente di aggregazione
 
 gdImagePtr p_img; // puntatore all'immagine
 
@@ -114,7 +114,7 @@ void *start_DLA_parallel(void *rank)
     stuckedParticles stucked_particles; // lista di particelle bloccate
 
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, (int)coefficent) != 0)
+    if (init_StuckedParticles(&stucked_particles, (int)coefficient) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -153,7 +153,9 @@ void *start_DLA_parallel(void *rank)
         {
             particle p = sp_pop(&stucked_particles);
             matrix[p.current_position->y][p.current_position->x].value = 1;
+            printf("size: %d \n", stucked_particles.size);
         }
+        printf("%d.Finished: %d \n", (int)my_rank, stucked_particles.size);
         pthread_barrier_wait(&barrier);
     }
 
@@ -185,7 +187,8 @@ int main(int argc, char *argv[])
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
     // da calibrare
-    coefficent = ((num_particles * horizon) / (n * m)) * (0.2 / num_threads);
+    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / num_threads;
+    printf("coefficient: %f\n", coefficient);
 
     matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
