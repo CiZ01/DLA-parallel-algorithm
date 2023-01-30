@@ -5,7 +5,6 @@
 #include "support_functions.c"
 #include "timer.h"
 
-
 stuckedParticles sp; // lista di particelle bloccate
 
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
@@ -36,7 +35,8 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if(sp_append(sp, p) != 0){
+                if (sp_append(sp, *p) != 0)
+                {
                     perror("Error appending particle to stuckedParticles list. \n");
                 }
                 p->stuck = 1;
@@ -121,9 +121,9 @@ void start_DLA(int num_particles,
                 }
             }
         }
-        while(sp.size > 0){
-            particle p;
-            sp_pop(&sp, &p);
+        while (sp.size > 0)
+        {
+            particle p = sp_pop(&sp);
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
     }
@@ -158,9 +158,9 @@ int main(int argc, char *argv[])
 
     matrix[seed[0]][seed[1]] = 1; // set seed
 
-    int coefficent = (int)(num_particles * horizon)/(n*m);
+    int coefficent = (int)(num_particles * horizon) / (n * m);
 
-    if(init_StuckedParticles(&sp, coefficent) != 0)
+    if (init_StuckedParticles(&sp, coefficent) != 0)
         perror("Error allocating memory");
 
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);

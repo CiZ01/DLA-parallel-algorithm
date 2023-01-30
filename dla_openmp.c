@@ -12,7 +12,6 @@ float coefficent; // coefficiente di aggregazione
 
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 
-
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
  * La funzione ritorna un intero che indica se la particella è rimasta bloccata o meno.
@@ -28,7 +27,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    
+
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -37,7 +36,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if(sp_append(sp, p) != 0)
+                if (sp_append(sp, *p) != 0)
                 {
                     perror("Error nell'append della stuckedParticles list. \n");
                     exit(1);
@@ -49,7 +48,6 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
     }
     return 0;
 }
-
 
 /*
  * gen_particles genera una lista di particelle con posizione casuale.
@@ -65,7 +63,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         perror("Too many particles for the matrix size. \n");
     }
     int i = 0;
-    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
+#pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
         // allocate memory for particle position
@@ -85,7 +83,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         particles_list[i].isOut = 0;
     }
 }
-
 
 /*
  * start_DLA simula l'algoritmo DLA.
@@ -121,7 +118,7 @@ void start_DLA(int num_particles,
     {
         // Itero per particelle per ogni iterazione
         int i;
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
+#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -137,16 +134,15 @@ void start_DLA(int num_particles,
                 }
             }
         }
-        #pragma omp barrier
+#pragma omp barrier
         int j;
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
+#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
         for (j = 0; j < sp.size; j++)
         {
-            particle p;
-            sp_pop(&sp, &p);
+            particle p = sp_pop(&sp);
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
-        #pragma omp barrier
+#pragma omp barrier
     }
     printf("Finished DLA\n");
 }
@@ -157,8 +153,8 @@ int main(int argc, char *argv[])
     int n, m;          // matrix dimensions
     int seed[2];       // seed position
     int num_particles; // number of particles
-    int horizon;      // horizon
-    int **matrix;     //matri
+    int horizon;       // horizon
+    int **matrix;      // matri
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
 
@@ -192,7 +188,7 @@ int main(int argc, char *argv[])
     double end = omp_get_wtime();
 
     double elapsed = (double)(end - start);
-    
+
     printf("il tempo impiegato per il DLA è: %f \n", elapsed);
 
     FILE *elapsed_time = fopen("./times/time_dla_openmp.txt", "a");
@@ -203,13 +199,13 @@ int main(int argc, char *argv[])
     img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);
-    
+
     int black = gdImageColorAllocate(img, 0, 0, 0);
     int red = gdImageColorAllocate(img, 255, 0, 0);
 
     int colors[] = {black, red};
 
-    //filename a caso da sistemare
+    // filename a caso da sistemare
     createImage_intMatrix(img, m, n, matrix, colors, "DLA_openmp.jpg");
     // -----FINALIZE----- //
 
@@ -223,7 +219,7 @@ int main(int argc, char *argv[])
     printf("matrix, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
-     
+
     for (int i = 0; i < num_particles; i++)
     {
         if (particles_list[i].current_position != NULL)

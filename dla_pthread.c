@@ -87,7 +87,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedPar
         {
             if (matrix[near_y][near_x].value == 1)
             {
-                if(sp_append(sp, *p) != 0)
+                if (sp_append(sp, *p) != 0)
                 {
                     perror("Error nell'append della stuckedParticles list. \n");
                     exit(1);
@@ -110,16 +110,16 @@ void *start_DLA_parallel(void *rank)
     }
 
     printf("%d.Starting DLA\n", (int)my_rank);
-    
+
     stuckedParticles stucked_particles; // lista di particelle bloccate
-    
+
     // inizializzo la lista delle particelle bloccate
     if (init_StuckedParticles(&stucked_particles, (int)coefficent) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
     }
-   
+
     // create particles
     particle *my_particles_list = (particle *)malloc(sizeof(particle) * my_num_particles);
     if (my_particles_list == NULL)
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
     // da calibrare
-    coefficent = ((num_particles * horizon) / (n * m))*(0.2/num_threads);
+    coefficent = ((num_particles * horizon) / (n * m)) * (0.2 / num_threads);
 
     matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
@@ -245,14 +245,13 @@ int main(int argc, char *argv[])
     {
         if (matrix[i] != NULL)
         {
-            free(matrix[i]);                          // Libera la memoria della riga i-esima
+            free(matrix[i]); // Libera la memoria della riga i-esima
         }
     }
 
     printf("matrix, mutex, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
-
 
     if (p_img != NULL)
         gdImageDestroy(p_img); // Libera la memoria dell'immagine
@@ -265,12 +264,5 @@ int main(int argc, char *argv[])
         free(thread_handles); // Libera la lista dei threads
     printf("thread_handles \n");
 
-<<<<<<< HEAD
-    GET_TIME(end_s);
-
-    elapsed_s = (double)((end_s - start_s));
-    printf("total: %f, T_s: %f \n", elapsed_s, (double)(elapsed_s - elapsed));
-=======
->>>>>>> 7a29ced231355a1e159c186e0f51e9831c79184f
     return 0;
 }
