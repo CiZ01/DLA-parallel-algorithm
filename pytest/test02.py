@@ -22,10 +22,10 @@ def run_test(configurations: list) -> tuple:
         n, m, num_particles, num_threads, iters, exe = config
 
         if num_threads > 0 and exe != "dla_single_thread":
-            args = f"{n},{m}|{num_particles}|-n{num_threads}|-t{iters}|-s{n//4},{m//4}".split(
+            args = f"{n},{m}|{num_particles}|-n{num_threads}|-t{iters}|-s{n//2},{m//2}".split(
                 "|")
         else:
-            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//4},{m//4}".split(
+            args = f"{n},{m}|{num_particles}|-t{iters}|-s{n//2},{m//2}".split(
                 "|")
 
         cmd_running = [f"./{exe}.out"] + args
