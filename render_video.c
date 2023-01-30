@@ -91,7 +91,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p)
     {
         int near_y = p->current_position->y + directions[i];
         int near_x = p->current_position->x + directions[i + 1];
-        if (near_x >= 0 && near_x < n && near_y >= 0 && near_y < m)
+        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
         {
             if (matrix[near_y][near_x].value == 1)
             {

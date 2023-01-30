@@ -14,38 +14,100 @@
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
 
+/*
+* Struttura per la posizione di una particella.
+*/
 typedef struct
 {
-    int x; // position on x axis
-    int y; // position on y axis
+    int x; // posizione sull'asse x
+    int y; // posizione sull'asse y
 } position;
 
+
+/*
+* Struttura per la particella.
+* Contiene la posizione attuale, la direzione, lo stato di stuck e lo stato di uscita.
+* Lo stato di stuck indica se la particella è bloccata o meno.
+* Lo stato di uscita indica se la particella è uscita dalla matrice o meno.
+*/
 typedef struct
 {
-    position *current_position;
+    position *current_position; // posizione attuale della particella
 
-    int vel;  // velocity
-    int dire; // direction
+    int dire; // direzione
 
     int stuck; // 0 = not stuck, 1 = stuck
-    int isOut; //
+    int isOut; // 0 = inside, 1 = outside
 } particle;
 
+/*
+* Struttura per la cella della matrice.
+* Contiene il valore della cella e il lock per la mutua esclusione.
+* Il valore della cella indica se la cella è occupata e da cosa è occupata.
+* Vale 1 se è occupata da un seme, 2 o suo multiplo se è occupata da una particella.
+* Il lock è un intero per la mutua esclusione. Vale 0 se la cella è libera, 1 se è occupata.
+*/
 typedef struct
 {
-    int value;
-    pthread_mutex_t mutex;
+    int value; // 0 = libera, 1 = seed, 2 o più = particelle
+    pthread_mutex_t mutex; // lock per la mutua esclusione
 } cell;
+
+
+typedef struct{
+    particle *data; // array di particelle
+    int size; // numero di particelle
+    int capacity; // capacità massima dell'array
+    particle* last; // puntatore all'ultima particella
+    float coefficent; // coefficiente di reallocazione
+}stuckedParticles;
 
 void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon);
 void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon);
 void write_matrix(int n, int m, int **matrix);
-void write_paths(int num_particles, particle *particles_list);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *p, int n, int m);
-void move_parallel(particle *part, int n, int m);
+void move_parallel(particle *p, int n, int m);
 void move_pthread(particle *p, cell **matrix, int n, int m);
 double get_time(void);
+int init_StuckedParticles(stuckedParticles *sp, int capacity);
+
+
+int init_StuckedParticles(stuckedParticles *sp, int capacity){
+    sp->data = (particle*)malloc(capacity*sizeof(particle));
+    if(sp->data == NULL){
+        return -1;
+    }
+    sp->size = 0;
+    sp->capacity = capacity;
+    sp->last = sp->data;
+    sp->coefficent = capacity;
+    return 0;
+}
+
+int sp_append(stuckedParticles *sp, particle *p){
+    if(sp->size == sp->capacity){
+        sp = (stuckedParticles*)realloc(sp, (int)(sp->capacity+sp->coefficent)*sizeof(particle));
+        if(sp == NULL){
+            return -1;
+        }
+        sp->capacity = (int)sp->capacity+sp->coefficent;
+    }
+    sp->last = p;
+    sp->size++;
+    return 0;
+}
+
+int sp_remove(stuckedParticles *sp, particle *p){
+    if(sp->size == 0){
+        return -1;
+    }
+    p = sp->last;
+
+    sp->last = sp->last - sizeof(particle);
+    sp->size--;
+    return 0;
+}
 
 
 void write_matrix(int n, int m, int **matrix)
