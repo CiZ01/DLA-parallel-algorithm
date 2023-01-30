@@ -7,7 +7,10 @@
 
 gdImagePtr img;
 
-int thread_count;
+int thread_count; // numero di thread
+float coefficent; // coefficiente di aggregazione
+
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 
 
 /*
@@ -17,19 +20,11 @@ int thread_count;
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
-int check_position(int n, int m, int **matrix, particle *p)
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
     if (p->isOut == 1)
     {
         return 0;
-    }
-
-    if (p->stuck == -1)
-    {
-        #pragma omp atomic write
-        matrix[p->current_position->y][p->current_position->x] = 1;
-        p->stuck = 1;
-        return -1;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
@@ -42,7 +37,12 @@ int check_position(int n, int m, int **matrix, particle *p)
         {
             if (matrix[near_y][near_x] == 1)
             {
-                p->stuck = -1;
+                if(sp_append(sp, p) != 0)
+                {
+                    perror("Error nell'append della stuckedParticles list. \n");
+                    exit(1);
+                }
+                p->stuck = 1;
                 return -1;
             }
         }
@@ -80,7 +80,6 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-        particles_list[i].vel = rand_r(&gen_rand) % 10;
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
         particles_list[i].isOut = 0;
@@ -108,6 +107,16 @@ void start_DLA(int num_particles,
                int **matrix, int horizon)
 {
     printf("Starting DLA\n");
+
+    stuckedParticles sp; // lista di particelle bloccate
+
+    // inizializzo la lista delle particelle bloccate
+    if (init_StuckedParticles(&sp, (int)coefficent) != 0)
+    {
+        perror("Error nell'inizializazione della stuckedParticles list. \n");
+        exit(1);
+    }
+
     for (int t = 0; t < horizon + 1; t++)
     {
         // Itero per particelle per ogni iterazione
@@ -118,7 +127,7 @@ void start_DLA(int num_particles,
             particle *p = &particles_list[i];
             if (p->stuck <= 0)
             {
-                int isStuck = check_position(n, m, matrix, p);
+                int isStuck = check_position(n, m, matrix, p, &sp);
                 if (isStuck == 0)
                 {
                     if (t < horizon)
@@ -127,6 +136,15 @@ void start_DLA(int num_particles,
                         matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
+        }
+        #pragma omp barrier
+        int j;
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
+        for (j = 0; j < sp.size; j++)
+        {
+            particle p;
+            sp_pop(&sp, &p);
+            matrix[p.current_position->y][p.current_position->x] = 1;
         }
         #pragma omp barrier
     }
@@ -140,13 +158,14 @@ int main(int argc, char *argv[])
     int seed[2];       // seed position
     int num_particles; // number of particles
     int horizon;      // horizon
-
+    int **matrix;     //matri
 
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
 
+    coefficent = (num_particles * horizon) / (n * m);
+
     printf("seed %d, %d\n", seed[0], seed[1]);
 
-    int **matrix;
     matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
         perror("Error allocating memory");
@@ -155,7 +174,7 @@ int main(int argc, char *argv[])
     {
         matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
-            perror("Error allocating memory");
+            perror("Error allocatingx memory");
     }
 
     matrix[seed[0]][seed[1]] = 1; // set seed
