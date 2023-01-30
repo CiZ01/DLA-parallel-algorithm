@@ -48,7 +48,7 @@ typedef struct
  */
 typedef struct
 {
-    int value;             // 0 = libera, 1 = seed, 2 o più = particelle
+    int value; // 0 = libera, 1 = seed, 2 o più = particelle
 } cell;
 
 typedef struct
@@ -72,9 +72,6 @@ int sp_append(stuckedParticles *sp, particle p);
 particle sp_pop(stuckedParticles *sp);
 int sp_destroy(stuckedParticles *sp);
 
-<<<<<<< HEAD
-=======
-
 int init_StuckedParticles(stuckedParticles *sp, int capacity)
 {
     sp->data = (particle *)malloc(capacity * sizeof(particle));
@@ -90,7 +87,7 @@ int init_StuckedParticles(stuckedParticles *sp, int capacity)
 
 int sp_append(stuckedParticles *sp, particle p)
 {
-    if (sp->size == sp->capacity-1)
+    if (sp->size == sp->capacity - 1)
     {
         sp->data = (particle *)realloc(sp->data, (sp->capacity * 2) * sizeof(particle));
         if (sp->data == NULL)
@@ -129,7 +126,6 @@ int sp_destroy(stuckedParticles *sp)
     }
 }
 
->>>>>>> 7a29ced231355a1e159c186e0f51e9831c79184f
 void write_matrix(int n, int m, int **matrix)
 {
     FILE *fptr;
