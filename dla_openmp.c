@@ -27,14 +27,6 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         return 0;
     }
 
-    if (p->stuck == -1)
-    {
-        #pragma omp atomic write
-        matrix[p->current_position->y][p->current_position->x] = 1;
-        p->stuck = 1;
-        return -1;
-    }
-
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
     
     for (int i = 0; i < 8; i += 2)
