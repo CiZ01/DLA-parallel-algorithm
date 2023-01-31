@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0
-    matrix = (int **)malloc(n, sizeof(int *)); 
+    matrix = (int **)malloc(n * sizeof(int *)); 
     if (matrix == NULL)
     {
         perror("Errore nell'allocazione di memoria per la matrice");
