@@ -11,7 +11,7 @@
 int num_threads; // numero di thread
 int n, m, num_particles, horizon;
 int seed[2];               // seed
-cell **matrix;             // matrice di punttori a celle
+int **matrix;             // matrice di interi
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
 float coefficent; // coefficiente di aggregazione
@@ -19,7 +19,7 @@ float coefficent; // coefficiente di aggregazione
 gdImagePtr p_img; // puntatore all'immagine
 
 void *start_DLA_parallel(void *rank);
-int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedParticles *sp);
+int check_position_parallel(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 void gen_particles_parallel(int *seed, int my_num_particles, particle *my_particles_list, int n, int m);
 
 /*
@@ -70,7 +70,7 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
  * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata e quessto
  * lo fa all'iterazione successiva per non interferire con le altre particelle.
  */
-int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedParticles *sp)
+int check_position_parallel(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
     if (p->isOut == 1)
     {
@@ -85,7 +85,7 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedPar
         int near_x = p->current_position->x + directions[i + 1];
         if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
         {
-            if (matrix[near_y][near_x].value == 1)
+            if (matrix[near_y][near_x] == 1)
             {
                 if (sp_append(sp, *p) != 0)
                 {
@@ -100,6 +100,13 @@ int check_position_parallel(int n, int m, cell **matrix, particle *p, stuckedPar
     return 0;
 }
 
+/*
+* La funzione inizia la simulazione DLA.
+* Riceve in input il rank del thread.
+* Ogni thread esegue la simulazione e viene sincronizzato con gli altri thread tramite una barriera al termine di ogni tick.
+* All'inizio della simulazione viene inizializzata la lista delle particelle stucked, e viene generata una lista di particelle casuali.
+* Al termine di ogni tick viene aggiornata la matrice.  
+*/
 void *start_DLA_parallel(void *rank)
 {
     long my_rank = (long)rank;
@@ -143,7 +150,7 @@ void *start_DLA_parallel(void *rank)
                     if (t < horizon)
                         move_parallel(p, n, m);
                     else if (p->isOut == 0)
-                        matrix[p->current_position->y][p->current_position->x].value += 2;
+                        matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
         }
@@ -152,7 +159,7 @@ void *start_DLA_parallel(void *rank)
         while (stucked_particles.size > 0)
         {
             particle p = sp_pop(&stucked_particles);
-            matrix[p.current_position->y][p.current_position->x].value = 1;
+            matrix[p.current_position->y][p.current_position->x] = 1;
         }
         pthread_barrier_wait(&barrier);
     }
@@ -182,24 +189,25 @@ int main(int argc, char *argv[])
 {
     double start, end, elapsed;
 
+    // recupero i parametri da riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
-    // da calibrare
+    // calcolo il coefficiente con cui inizializzare la lista delle particelle stucked
     coefficent = ((num_particles * horizon) / (n * m)) * (0.2 / num_threads);
 
-    matrix = (cell **)malloc(n * sizeof(cell *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    // Alloca un array di puntatori a interi per ogni riga
+    matrix = (int **)malloc(n * sizeof(int *)); 
     if (matrix == NULL)
         perror("Error allocating memory");
 
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = (cell *)malloc(m * sizeof(cell)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
             perror("Error allocating memory");
-        matrix[i]->value = 0;
     }
 
-    matrix[seed[0]][seed[1]].value = 1; // set seed
+    matrix[seed[1]][seed[0]] = 1; // set seed
 
     // create threads
     long thread;
@@ -236,7 +244,7 @@ int main(int argc, char *argv[])
     int colors[] = {black, red};
 
     printf("Creating image... \n");
-    createImage(p_img, m, n, matrix, filename, colors);
+    createImage(p_img, m, n, matrix, colors, filename);
 
     // -----FINALIZE----- //
 
@@ -249,7 +257,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("matrix, mutex, ");
+    printf("matrix, ");
     if (matrix != NULL)
         free(matrix); // Libera la memoria dell'array di puntatori
 

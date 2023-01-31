@@ -1,12 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <getopt.h> //solo perché vscode da errore su optarg
 #include <string.h>
-#include <time.h>
 #include <gd.h>
 #include <errno.h>
-#include <pthread.h>
 
 #define NUM_THREADS 4
 #define HORIZON 1000
@@ -40,23 +37,14 @@ typedef struct
 } particle;
 
 /*
- * Struttura per la cella della matrice.
- * Contiene il valore della cella e il lock per la mutua esclusione.
- * Il valore della cella indica se la cella è occupata e da cosa è occupata.
- * Vale 1 se è occupata da un seme, 2 o suo multiplo se è occupata da una particella.
- * Il lock è un intero per la mutua esclusione. Vale 0 se la cella è libera, 1 se è occupata.
+ * Struttura per la lista di particelle bloccate.
+ * Contiene un array di particelle, la dimensione dell'array e la capacità massima dell'array.
  */
 typedef struct
 {
-    int value; // 0 = libera, 1 = seed, 2 o più = particelle
-} cell;
-
-typedef struct
-{
-    particle *data;   // array di particelle
-    int size;         // numero di particelle
-    int capacity;     // capacità massima dell'array
-    float coefficent; // coefficiente di reallocazione
+    particle *data; // array di particelle
+    int size;       // numero di particelle
+    int capacity;   // capacità massima dell'array
 } stuckedParticles;
 
 void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon);
@@ -65,13 +53,19 @@ void write_matrix(int n, int m, int **matrix);
 void print_matrix(int n, int m, int **matrix);
 void move(particle *p, int n, int m);
 void move_parallel(particle *p, int n, int m);
-void move_pthread(particle *p, cell **matrix, int n, int m);
 double get_time(void);
 int init_StuckedParticles(stuckedParticles *sp, int capacity);
 int sp_append(stuckedParticles *sp, particle p);
 particle sp_pop(stuckedParticles *sp);
 int sp_destroy(stuckedParticles *sp);
+void createImage(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename);
 
+/*
+ * Inizializza la struttura stuckedParticles.
+ * @param stuckedParticles struttura da inizializzare
+ * @param capacity capacità massima dell'array
+ * @return 0 se l'inizializzazione è andata a buon fine, -1 altrimenti
+ */
 int init_StuckedParticles(stuckedParticles *sp, int capacity)
 {
     sp->data = (particle *)malloc(capacity * sizeof(particle));
@@ -81,10 +75,15 @@ int init_StuckedParticles(stuckedParticles *sp, int capacity)
     }
     sp->size = 0;
     sp->capacity = (int)capacity;
-    sp->coefficent = capacity;
     return 0;
 }
 
+/*
+ * Aggiunge una particella alla lista, se la lista è piena viene riallocata la memoria.
+ * @param stuckedParticles struttura a cui aggiungere la particella
+ * @param particle particella da aggiungere
+ * @return 0 se l'aggiunta è andata a buon fine, -1 altrimenti
+ */
 int sp_append(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
@@ -102,6 +101,11 @@ int sp_append(stuckedParticles *sp, particle p)
     return 0;
 }
 
+/*
+ * Rimuove l'ultima particella inserita nella struttura e la restituisce.
+ * @param stuckedParticles struttura da cui rimuovere la particella
+ * @return particella rimossa, in caso di errore restituisce una particella con tutti i campi a 0
+ */
 particle sp_pop(stuckedParticles *sp)
 {
     if (sp->size == 0)
@@ -113,6 +117,11 @@ particle sp_pop(stuckedParticles *sp)
     return p;
 }
 
+/*
+ * Distrugge e libera la memoria occupata dalla struttura.
+ * @param stuckedParticles struttura da distruggere
+ * @return 0 se la distruzione è andata a buon fine, -1 altrimenti
+ */
 int sp_destroy(stuckedParticles *sp)
 {
     if (sp->data != NULL)
@@ -153,24 +162,35 @@ void write_matrix(int n, int m, int **matrix)
 
 /*
  * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
- * In caso di mancato argomento il programma termina per un segmentation fault.
+ * Prende come parametri le variabili da settare:
+ * @param argc numero di argomenti passati in input
+ * @param argv array di argomenti passati in input
+ * @param num_particles numero di particelle
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param seed posizione iniziale della particella
+ * @param num_threads numero di threads
+ * @param horizon numero di iterazioni massime
  */
 void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *num_threads, int *horizon)
 {
-    // get matrix dimensions
+    // recupero le dimensioni della matrice
     char *token = strtok(argv[1], ",");
     *n = (int)atoi(token);
     token = strtok(NULL, ",");
     *m = (int)atoi(token);
 
-    // get number of particles
+    // recupero il numero di particelle
     *num_particles = (int)atoi(argv[2]);
 
-    // get seed position
+    // genero una seed casuale - DEFAULT
     seed[0] = (int)rand_r(&gen_rand) % *n;
     seed[1] = (int)rand_r(&gen_rand) % *m;
 
+    // setto il numero massimo di iterazioni - DEFAULT
     *horizon = HORIZON;
+
+    // setto il numero di threads - DEFAULT
     *num_threads = NUM_THREADS;
 
     int opt;
@@ -179,43 +199,54 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
         switch (opt)
         {
         case 'n':
+            // recupero il numero di threads - OPTION
             *num_threads = atoi(optarg);
             break;
         case 't':
+            // recupero il numero massimo di iterazioni - OPTION
             *horizon = atoi(optarg);
             break;
         case 's':
-            // get seed position
+            // recupero la posizione iniziale del seed - OPTION
             token = strtok(optarg, ",");
             seed[0] = (int)atoi(token);
             token = strtok(NULL, ",");
             seed[1] = (int)atoi(token);
             break;
-        case ':':
-            printf("Opzione richiede un argomento: %c", opt);
-            break;
         case '?':
-            printf("Opzione non valida: %c\n", opt);
-            break;
+            printf("Usage: %s [-n num_threads] [-t horizon] [-s seed] n,m num_particles \n", argv[0]);
+            exit(2);
         }
     }
 }
 
+/*
+ * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
+ * Prende come parametri le variabili da settare:
+ * @param argc numero di argomenti passati in input
+ * @param argv array di argomenti passati in input
+ * @param num_particles numero di particelle
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param seed posizione iniziale della particella
+ * @param horizon numero di iterazioni massime
+ */
 void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon)
 {
-    // get matrix dimensions
+    // recupero le dimensioni della matrice
     char *token = strtok(argv[1], ",");
     *n = (int)atoi(token);
     token = strtok(NULL, ",");
     *m = (int)atoi(token);
 
-    // get number of particles
+    // recupero il numero di particelle
     *num_particles = (int)atoi(argv[2]);
 
-    // get seed position
+    // genero random il seed - DEFAULT
     seed[0] = (int)rand_r(&gen_rand) % *n;
     seed[1] = (int)rand_r(&gen_rand) % *m;
 
+    // setto il numero di iterazioni massime - DEFAULT
     *horizon = HORIZON;
 
     int opt;
@@ -224,29 +255,28 @@ void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *s
         switch (opt)
         {
         case 't':
+            // recupero il numero di iterazioni massime - OPTION
             *horizon = atoi(optarg);
             break;
         case 's':
-            // get seed position
+            // recupero la posizione iniziale del seed - OPTION
             token = strtok(optarg, ",");
             seed[0] = (int)atoi(token);
             token = strtok(NULL, ",");
             seed[1] = (int)atoi(token);
             break;
-        case ':':
-            printf("Opzione richiede un argomento: %c", opt);
-            break;
         case '?':
-            printf("Opzione non valida: %c\n", opt);
-            break;
+            printf("Usage: %s [-n num_threads] [-t horizon] [-s seed] n,m num_particles \n", argv[0]);
+            exit(2);
         }
     }
 }
 
 /*
- * print_matrix stampa la matrice.
- * La funzione riceve in input le dimensioni della matrice e la matrice.
- * La funzione non ritorna nulla.
+ * Stampa la matrice su standard output.
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param matrix matrice da stampare
  */
 void print_matrix(int n, int m, int **matrix)
 {
@@ -263,9 +293,12 @@ void print_matrix(int n, int m, int **matrix)
 }
 
 /*
- * move muove la particella in una direzione pseudocasuale.
- * La funzione riceve in input la particella interessata.
- * La funzione non ritorna nulla.
+ * Muove la particella in una direzione pseudocasuale.
+ * Se la particelle esce fuori dalla matrice viene settata la variabile isOut a 1.
+ * Se la particella non esce fuori dalla matrice viene settata la variabile isOut a 0.
+ * @param p puntatore alla particella da muovere
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
  */
 void move(particle *p, int n, int m)
 {
@@ -288,6 +321,14 @@ void move(particle *p, int n, int m)
     }
 }
 
+/*
+ * Muove la particella in una direzione pseudocasuale, utilizza una reentrant random.
+ * Se la particelle esce fuori dalla matrice viene settata la variabile isOut a 1.
+ * Se la particella non esce fuori dalla matrice viene settata la variabile isOut a 0.
+ * @param p puntatore alla particella interessata
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ */
 void move_parallel(particle *p, int n, int m)
 {
 
@@ -309,55 +350,16 @@ void move_parallel(particle *p, int n, int m)
     }
 }
 
-void move_pthread(particle *p, cell **matrix, int n, int m)
-{
-
-    // move particle
-    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
-    p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
-
-    p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
-    p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
-
-    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
-    {
-        p->isOut = 1;
-        return;
-    }
-    else
-    {
-        p->isOut = 0;
-        matrix[p->current_position->y][p->current_position->x].value += 2;
-    }
-}
-
-void write_matrix_cell(int n, int m, cell **matrix)
-{
-    FILE *fptr;
-
-    fptr = fopen("output/matrix.txt", "a");
-    if (fptr == NULL)
-        perror("Error opening file");
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < m; j++)
-        {
-            fprintf(fptr, "%d ", matrix[i][j].value);
-        }
-        fprintf(fptr, "\n");
-    }
-    fprintf(fptr, "\n");
-
-    if (ferror(fptr))
-        perror("Error writing file");
-
-    // close file
-    if (fclose(fptr))
-        perror("Error closing file");
-}
-
-void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename)
+/*
+ * Crea l'immagine e la salva su file.
+ * @param img puntatore all'immagine
+ * @param width larghezza dell'immagine
+ * @param height altezza dell'immagine
+ * @param matrix matrice contenente i valori da stampare
+ * @param colors array contenente i colori da utilizzare
+ * @param filename nome del file da salvare
+ */
+void createImage(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename)
 {
     for (int y = 0; y < height; y++)
     {
@@ -375,27 +377,6 @@ void createImage_intMatrix(gdImagePtr img, int width, int height, int **matrix, 
     }
 
     // Salva l'immagine
-    FILE *out = fopen(filename, "wb");
-    gdImageJpeg(img, out, 100);
-    fclose(out);
-}
-
-void createImage(gdImagePtr img, int width, int height, cell **matrix, char *filename, int *colors)
-{
-    for (int y = 0; y < height; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            if (matrix[y][x].value == 1)
-            {
-                gdImageSetPixel(img, x, y, colors[0]);
-            }
-            else if (matrix[y][x].value > 1)
-            {
-                gdImageSetPixel(img, x, y, colors[1]);
-            }
-        }
-    }
     FILE *out = fopen(filename, "wb");
     gdImageJpeg(img, out, 100);
     fclose(out);

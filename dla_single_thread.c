@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
             perror("Error allocating memory");
     }
 
-    matrix[seed[0]][seed[1]] = 1; // set seed
+    matrix[seed[1]][seed[0]] = 1; // set seed
 
     int coefficent = (int)(num_particles * horizon) / (n * m);
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
     int colors[2];
     colors[0] = gdImageColorAllocate(img, 0, 0, 0);   // black
     colors[1] = gdImageColorAllocate(img, 255, 0, 0); // red
-    createImage_intMatrix(img, m, n, matrix, colors, "DLA.jpg");
+    createImage(img, m, n, matrix, colors, "single_thread_render.jpg");
 
     // -----FINALIZE----- //
 
