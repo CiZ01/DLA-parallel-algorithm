@@ -57,6 +57,7 @@ void move_parallel(particle *p, int n, int m);
 double get_time(void);
 int init_StuckedParticles(stuckedParticles *sp, int capacity);
 int sp_append(stuckedParticles *sp, particle p);
+int sp_append_openMP(stuckedParticles *sp, particle p);
 particle sp_pop(stuckedParticles *sp);
 int sp_destroy(stuckedParticles *sp);
 void createImage(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename);
@@ -164,6 +165,27 @@ int sp_append(stuckedParticles *sp, particle p)
     return 0;
 }
 
+
+/*
+ * Aggiunge una particella alla lista, se la lista è piena viene riallocata la memoria.
+ * @param stuckedParticles struttura a cui aggiungere la particella
+ * @param particle particella da aggiungere
+ * @return 0 se l'aggiunta è andata a buon fine, -1 altrimenti
+ */
+int sp_append_openMP(stuckedParticles *sp, particle p)
+{
+    if (sp->size == sp->capacity - 1)
+    {
+        printf("ERRORE \n");
+        exit(10);
+    }
+    #pragma omp critical
+    {
+        sp->data[sp->size + 1] = p;
+        sp->size++;
+    }
+    return 0;
+}
 /*
  * Rimuove l'ultima particella inserita nella struttura e la restituisce.
  * @param stuckedParticles struttura da cui rimuovere la particella
@@ -284,7 +306,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
-                sp_append(sp, *p);
+                sp_append_openMP(sp, *p);
                 p->stuck = 1;
                 return -1;
             }
