@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <getopt.h> //solo perché vscode da errore su optarg
 #include <string.h>
-#include <gd.h>
 #include <errno.h>
+#include <gd.h>
 
 #define NUM_THREADS 4
 #define HORIZON 1000
@@ -89,7 +89,6 @@ int sp_append(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
     {
-        printf("reallocating memory \n");
         sp->data = (particle *)realloc(sp->data, (int)(sp->capacity * 3) * sizeof(particle));
         if (sp->data == NULL)
         {
@@ -135,31 +134,6 @@ int sp_destroy(stuckedParticles *sp)
     {
         return -1;
     }
-}
-
-void write_matrix(int n, int m, int **matrix)
-{
-    FILE *fptr;
-
-    fptr = fopen("output/matrix.txt", "w+");
-    if (fptr == NULL)
-        perror("Error opening file");
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < m; j++)
-        {
-            fprintf(fptr, "%d ", matrix[i][j]);
-        }
-        fprintf(fptr, "\n");
-    }
-
-    if (ferror(fptr))
-        perror("Error writing file");
-
-    // close file
-    if (fclose(fptr))
-        perror("Error closing file");
 }
 
 /*
@@ -223,104 +197,42 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
 }
 
 /*
- * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
- * Prende come parametri le variabili da settare:
- * @param argc numero di argomenti passati in input
- * @param argv array di argomenti passati in input
- * @param num_particles numero di particelle
- * @param n numero di righe della matrice
- * @param m numero di colonne della matrice
- * @param seed posizione iniziale della particella
- * @param horizon numero di iterazioni massime
+ * Controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
+ * @param matrix: matrice di interi
+ * @param p: particella
+ * @param sp: lista di particelle bloccate
+ * @return 0 se la particella non è rimasta bloccata, -1 se la particella è rimasta bloccata
  */
-void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon)
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
-    // recupero le dimensioni della matrice
-    char *token = strtok(argv[1], ",");
-    *n = (int)atoi(token);
-    token = strtok(NULL, ",");
-    *m = (int)atoi(token);
-
-    // recupero il numero di particelle
-    *num_particles = (int)atoi(argv[2]);
-
-    // genero random il seed - DEFAULT
-    seed[0] = (int)rand_r(&gen_rand) % *n;
-    seed[1] = (int)rand_r(&gen_rand) % *m;
-
-    // setto il numero di iterazioni massime - DEFAULT
-    *horizon = HORIZON;
-
-    int opt;
-    while ((opt = getopt(argc, argv, "-t:-s:")) != -1)
+    if (p->isOut == 1)
     {
-        switch (opt)
+        return 0;
+    }
+
+    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
+
+    for (int i = 0; i < 8; i += 2)
+    {
+        int near_y = p->current_position->y + directions[i];
+        int near_x = p->current_position->x + directions[i + 1];
+        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
         {
-        case 't':
-            // recupero il numero di iterazioni massime - OPTION
-            *horizon = atoi(optarg);
-            break;
-        case 's':
-            // recupero la posizione iniziale del seed - OPTION
-            token = strtok(optarg, ",");
-            seed[0] = (int)atoi(token);
-            token = strtok(NULL, ",");
-            seed[1] = (int)atoi(token);
-            break;
-        case '?':
-            printf("Usage: %s [-n num_threads] [-t horizon] [-s seed] n,m num_particles \n", argv[0]);
-            exit(2);
+            if (matrix[near_y][near_x] == 1)
+            {
+                if (sp_append(sp, *p) != 0)
+                {
+                    perror("Errore durante l'aggiunta della particella nella lista \n");
+                    exit(1);
+                }
+                p->stuck = 1;
+                return -1;
+            }
         }
     }
-}
-
-/*
- * Stampa la matrice su standard output.
- * @param n numero di righe della matrice
- * @param m numero di colonne della matrice
- * @param matrix matrice da stampare
- */
-void print_matrix(int n, int m, int **matrix)
-{
-    int a, b;
-    for (a = 0; a < n; a++)
-    {
-        for (b = 0; b < m; b++)
-        {
-            printf("%d ", matrix[a][b]);
-        }
-        printf("\n");
-    }
-    printf("-----------------------------------------------------\n");
-}
-
-/*
- * Muove la particella in una direzione pseudocasuale.
- * Se la particelle esce fuori dalla matrice viene settata la variabile isOut a 1.
- * Se la particella non esce fuori dalla matrice viene settata la variabile isOut a 0.
- * @param p puntatore alla particella da muovere
- * @param n numero di righe della matrice
- * @param m numero di colonne della matrice
- */
-void move(particle *p, int n, int m)
-{
-
-    // move particle
-    p->dire = rand() % 2 == 0 ? 1 : -1;
-    p->current_position->x += rand() % 2 * p->dire;
-
-    p->dire = rand() % 2 == 0 ? 1 : -1;
-    p->current_position->y += rand() % 2 * p->dire;
-
-    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
-    {
-        p->isOut = 1;
-        return;
-    }
-    else
-    {
-        p->isOut = 0;
-    }
+    return 0;
 }
 
 /*
@@ -334,13 +246,14 @@ void move(particle *p, int n, int m)
 void move_parallel(particle *p, int n, int m)
 {
 
-    // move particle
+    // calcolo la nuova posoizione della particella
     p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
     p->current_position->x += rand_r(&gen_rand) % 2 * p->dire;
 
     p->dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
     p->current_position->y += rand_r(&gen_rand) % 2 * p->dire;
 
+    // controllo se la particella è uscita dalla matrice o no
     if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
     {
         p->isOut = 1;
@@ -352,6 +265,8 @@ void move_parallel(particle *p, int n, int m)
     }
 }
 
+
+// --------------- RENDER FUNCTIONS --------------- //
 /*
  * Crea l'immagine e la salva su file.
  * @param img puntatore all'immagine
@@ -382,4 +297,60 @@ void createImage(gdImagePtr img, int width, int height, int **matrix, int *color
     FILE *out = fopen(filename, "wb");
     gdImageJpeg(img, out, 100);
     fclose(out);
+}
+
+
+// --------- DEBUG FUNCTIONS --------- //
+
+/*
+* Scrive la matrice su un file di testo.
+* default filename `output/matrix.txt`. DEBUG
+* @param n numero di righe della matrice
+* @param m numero di colonne della matrice
+* @param matrix matrice da scrivere
+*/
+void write_matrix(int n, int m, int **matrix)
+{
+    FILE *fptr;
+
+    fptr = fopen("output/matrix.txt", "w+");
+    if (fptr == NULL)
+        perror("Error opening file");
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < m; j++)
+        {
+            fprintf(fptr, "%d ", matrix[i][j]);
+        }
+        fprintf(fptr, "\n");
+    }
+
+    if (ferror(fptr))
+        perror("Error writing file");
+
+    // close file
+    if (fclose(fptr))
+        perror("Error closing file");
+}
+
+
+/*
+ * Stampa la matrice su standard output. DEBUG
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param matrix matrice da stampare
+ */
+void print_matrix(int n, int m, int **matrix)
+{
+    int a, b;
+    for (a = 0; a < n; a++)
+    {
+        for (b = 0; b < m; b++)
+        {
+            printf("%d ", matrix[a][b]);
+        }
+        printf("\n");
+    }
+    printf("-----------------------------------------------------\n");
 }

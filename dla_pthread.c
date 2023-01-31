@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <pthread.h>
 #include "support_functions.c"
@@ -11,7 +10,7 @@
 int num_threads; // numero di thread
 int n, m, num_particles, horizon;
 int seed[2];               // seed
-int **matrix;             // matrice di interi
+int **matrix;              // matrice di interi
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
 float coefficient; // coefficiente di aggregazione
@@ -24,10 +23,12 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
 
 /*
  * Genera una lista di particelle con posizione casuale.
- * La funzione riceve in input il numero di particelle da generare, il seed iniziale della simulazione, la lista di particelle e le misure della matrice.
- * La funzione ritorna un errore nel caso in cui il numero di particelle sia maggiore della dimensione della matrice.
- * La funzione ritorna un errore nel caso in cui non riesca ad allocare memoria per la posizione della particella e per lo storico dei movimenti.
  * La funzione modifica la lista di particelle.
+ * @param seed: posizione del seme
+ * @param num_particles: numero di particelle da generare
+ * @param particles_list: lista di particelle
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
  */
 void gen_particles_parallel(int *seed, int my_num_particles, particle *my_particles_list, int n, int m)
 {
@@ -35,7 +36,7 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
     if (my_num_particles >= n * m)
     {
         perror("Troppe particelle all'interno della matrice. \n");
-        exit(1);
+        exit(3);
     }
 
     for (int i = 0; i < my_num_particles; i++)
@@ -44,7 +45,7 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
         my_particles_list[i].current_position = (position *)malloc(sizeof(position));
         if (my_particles_list[i].current_position == NULL)
         {
-            perror("Error allocating memory for current_position. \n");
+            perror("Errore nell'allocazione della lista di particelle \n");
             exit(1);
         }
 
@@ -63,50 +64,19 @@ void gen_particles_parallel(int *seed, int my_num_particles, particle *my_partic
 }
 
 /*
- * Controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
- * La funzione ritorna un intero che indica se la particella è rimasta bloccata o meno.
- * Se la particella si è aggregata, la funzione ritorna -1, altrimenti ritorna 0.
- * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
- * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata e quessto
- * lo fa all'iterazione successiva per non interferire con le altre particelle.
+ * La funzione inizia la simulazione DLA.
+ * Ogni thread esegue la simulazione e viene sincronizzato con gli altri thread con una barriera al termine di ogni tick.
+ * All'inizio della simulazione viene inizializzata la lista delle particelle stucked, e viene generata una lista di particelle casuali.
+ * La funzione inizia la simulazione DLA.
+ * La simulazione consiste in:
+ *  - un ciclo che simula il tempo, ogni tick è un'iterazione della simulazione
+ *  - per ogni particella viene chiamata la funzione check_position che controlla se la particella è in prossimità di un cristallo,
+ *    in caso affermativo setta un flag. Altrimenti la particella si muove.
+ *  - nel caso in cui la particella non sia rimasta bloccata, viene chiamata la funzione move che si occupa di muoverla.
+ *  - se la particella è rimasta bloccata viene aggiornata la matrice al termine di ogni tick
+ * Al termine di ogni tick viene aggiornata la matrice.
+ * @param rank: rank del thread
  */
-int check_position_parallel(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
-{
-    if (p->isOut == 1)
-    {
-        return 0;
-    }
-
-    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-
-    for (int i = 0; i < 8; i += 2)
-    {
-        int near_y = p->current_position->y + directions[i];
-        int near_x = p->current_position->x + directions[i + 1];
-        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
-        {
-            if (matrix[near_y][near_x] == 1)
-            {
-                if (sp_append(sp, *p) != 0)
-                {
-                    perror("Error nell'append della stuckedParticles list. \n");
-                    exit(1);
-                }
-                p->stuck = 1;
-                return -1;
-            }
-        }
-    }
-    return 0;
-}
-
-/*
-* La funzione inizia la simulazione DLA.
-* Riceve in input il rank del thread.
-* Ogni thread esegue la simulazione e viene sincronizzato con gli altri thread tramite una barriera al termine di ogni tick.
-* All'inizio della simulazione viene inizializzata la lista delle particelle stucked, e viene generata una lista di particelle casuali.
-* Al termine di ogni tick viene aggiornata la matrice.  
-*/
 void *start_DLA_parallel(void *rank)
 {
     long my_rank = (long)rank;
@@ -144,7 +114,7 @@ void *start_DLA_parallel(void *rank)
             particle *p = &my_particles_list[i];
             if (p->stuck == 0)
             {
-                int isStuck = check_position_parallel(n, m, matrix, p, &stucked_particles);
+                int isStuck = check_position(n, m, matrix, p, &stucked_particles);
                 if (isStuck == 0)
                 {
                     if (t < horizon)
@@ -159,12 +129,7 @@ void *start_DLA_parallel(void *rank)
         while (stucked_particles.size > 0)
         {
             particle p = sp_pop(&stucked_particles);
-<<<<<<< HEAD
             matrix[p.current_position->y][p.current_position->x] = 1;
-=======
-            matrix[p.current_position->y][p.current_position->x].value = 1;
-            printf("size: %d \n", stucked_particles.size);
->>>>>>> b01277bef390693b4936210d47184155ee697cf1
         }
         printf("%d.Finished: %d \n", (int)my_rank, stucked_particles.size);
         pthread_barrier_wait(&barrier);
@@ -198,17 +163,12 @@ int main(int argc, char *argv[])
     // recupero i parametri da riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
-<<<<<<< HEAD
-    // calcolo il coefficiente con cui inizializzare la lista delle particelle stucked
-    coefficent = ((num_particles * horizon) / (n * m)) * (0.2 / num_threads);
-=======
-    // da calibrare
+    // prendo la percentuale di quanto è satura la matrice e la moltiplico per un fattore costante.
+    // dal momento che istanzio una lista di particelle stucked per ogni thread, divido il risultato per il numero di threads
     coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / num_threads;
-    printf("coefficient: %f\n", coefficient);
->>>>>>> b01277bef390693b4936210d47184155ee697cf1
 
     // Alloca un array di puntatori a interi per ogni riga
-    matrix = (int **)malloc(n * sizeof(int *)); 
+    matrix = (int **)malloc(n * sizeof(int *));
     if (matrix == NULL)
         perror("Error allocating memory");
 
@@ -219,7 +179,7 @@ int main(int argc, char *argv[])
             perror("Error allocating memory");
     }
 
-    matrix[seed[1]][seed[0]] = 1; // set seed
+    matrix[seed[1]][seed[0]] = 1; // scrivo il seed sulla matrice
 
     // create threads
     long thread;
@@ -230,9 +190,11 @@ int main(int argc, char *argv[])
 
     GET_TIME(start);
 
+    // creo i threads
     for (thread = 0; thread < num_threads; thread++)
         pthread_create(&thread_handles[thread], NULL, start_DLA_parallel, (void *)thread);
 
+    // aspetto che i threads terminino
     for (thread = 0; thread < num_threads; thread++)
         pthread_join(thread_handles[thread], NULL);
 
@@ -242,15 +204,22 @@ int main(int argc, char *argv[])
 
     printf("Elapsed time: %f seconds \n", elapsed);
 
+    //-----TIME------//
+
     FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
     fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
 
+    //---------------//
+
+    // -----IMAGE----- //
     char filename[100];
     sprintf(filename, "DLA_%d_%d_%d_%d_%d.png", n, m, num_particles, num_threads, horizon);
     p_img = gdImageCreate(m, n);
+
     int white = gdImageColorAllocate(p_img, 255, 255, 255);
     gdImageFill(p_img, 0, 0, white);
+
     int black = gdImageColorAllocate(p_img, 0, 0, 0);
     int red = gdImageColorAllocate(p_img, 255, 0, 0);
     int colors[] = {black, red};

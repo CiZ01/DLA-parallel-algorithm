@@ -1,65 +1,82 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include "support_functions.c"
 #include "timer.h"
 
-stuckedParticles sp; // lista di particelle bloccate
-
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);
-void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
+void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon, stuckedParticles sp);
+void move(particle *p, int n, int m);
+void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon);
 
 /*
- * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
- * La funzione ritorna un intero che indica se la particella è rimasta bloccata o meno.
- * Se la particella è rimasta bloccata, la funzione ritorna -1, altrimenti ritorna 0.
- * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
- * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
+ * Recupera tutti gli argomenti passati in input al programma e li setta alle opportune variabili.
+ * Prende come parametri le variabili da settare:
+ * @param argc numero di argomenti passati in input
+ * @param argv array di argomenti passati in input
+ * @param num_particles numero di particelle
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param seed posizione iniziale della particella
+ * @param horizon numero di iterazioni massime
  */
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
+void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon)
 {
-    if (p->isOut == 1)
-    {
-        return 0;
-    }
+    // recupero le dimensioni della matrice
+    char *token = strtok(argv[1], ",");
+    *n = (int)atoi(token);
+    token = strtok(NULL, ",");
+    *m = (int)atoi(token);
 
-    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
+    // recupero il numero di particelle
+    *num_particles = (int)atoi(argv[2]);
 
-    for (int i = 0; i < 8; i += 2)
+    // genero random il seed - DEFAULT
+    seed[0] = (int)rand_r(&gen_rand) % *n;
+    seed[1] = (int)rand_r(&gen_rand) % *m;
+
+    // setto il numero di iterazioni massime - DEFAULT
+    *horizon = HORIZON;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "-t:-s:")) != -1)
     {
-        int near_y = p->current_position->y + directions[i];
-        int near_x = p->current_position->x + directions[i + 1];
-        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
+        switch (opt)
         {
-            if (matrix[near_y][near_x] == 1)
-            {
-                if (sp_append(sp, *p) != 0)
-                {
-                    perror("Error appending particle to stuckedParticles list. \n");
-                }
-                p->stuck = 1;
-                return -1;
-            }
+        case 't':
+            // recupero il numero di iterazioni massime - OPTION
+            *horizon = atoi(optarg);
+            break;
+        case 's':
+            // recupero la posizione iniziale del seed - OPTION
+            token = strtok(optarg, ",");
+            seed[0] = (int)atoi(token);
+            token = strtok(NULL, ",");
+            seed[1] = (int)atoi(token);
+            break;
+        case '?':
+            printf("Usage: %s [-n num_threads] [-t horizon] [-s seed] n,m num_particles \n", argv[0]);
+            exit(2);
         }
     }
-    return 0;
 }
 
 /*
- * gen_particles genera una lista di particelle con posizione casuale.
- * La funzione riceve in input il numero di particelle da generare, il iniziale della simulazione, la lista di particelle e le misure della matrice.
- * La funzione ritorna un errore nel caso in cui il numero di particelle sia maggiore della dimensione della matrice.
- * La funzione ritorna un errore nel caso in cui non riesca ad allocare memoria per la posizione della particella e per lo storico dei movimenti.
+ * Genera una lista di particelle con posizione casuale.
  * La funzione modifica la lista di particelle.
+ * @param seed: posizione del seme
+ * @param num_particles: numero di particelle da generare
+ * @param particles_list: lista di particelle
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
  */
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
 
     if (num_particles >= n * m)
     {
-        perror("Too many particles for the matrix size. \n");
+        perror("Troppe particelle all'interno della matrice. \n");
+        exit(3);
     }
 
     for (int i = 0; i < num_particles; i++)
@@ -68,59 +85,101 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
         particles_list[i].current_position = (position *)malloc(sizeof(position));
         if (particles_list[i].current_position == NULL)
         {
-            perror("Error allocating memory for current_position. \n");
+            perror("Errore durante l'allocazione della lista di particelle. \n");
+            exit(1);
         }
+
+        // setto la posizione della particella, se è uguale al seed la ricreo
         do
         {
             particles_list[i].current_position->x = rand() % m;
             particles_list[i].current_position->y = rand() % n;
-            // check if the particle is not in the same position of the seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
 
-        particles_list[i].dire = rand() % 2 == 0 ? 1 : -1;
+        particles_list[i].dire = 0;
         particles_list[i].stuck = 0;
         particles_list[i].isOut = 0;
     }
 }
 
 /*
- * start_DLA simula l'algoritmo DLA.
- * Printa la matrice una prima volta e poi simula il movimento di ogni particella per un valore t.
- * La simulazione del movimento consiste:
- *  - in un ciclo che scorre tutte le particelle
+ * Muove la particella in una direzione pseudocasuale.
+ * Se la particelle esce fuori dalla matrice viene settata la variabile isOut a 1.
+ * Se la particella non esce fuori dalla matrice viene settata la variabile isOut a 0.
+ * @param p puntatore alla particella da muovere
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ */
+void move(particle *p, int n, int m)
+{
+
+    // calcolo la nuova posoizione della particella
+    p->dire = rand() % 2 == 0 ? 1 : -1;
+    p->current_position->x += rand() % 2 * p->dire;
+
+    p->dire = rand() % 2 == 0 ? 1 : -1;
+    p->current_position->y += rand() % 2 * p->dire;
+
+    // controllo se la particella è uscita dalla matrice o no
+    if (!(p->current_position->x >= 0 && p->current_position->x < m && p->current_position->y >= 0 && p->current_position->y < n))
+    {
+        p->isOut = 1;
+        return;
+    }
+    else
+    {
+        p->isOut = 0;
+    }
+}
+
+/*
+ * La funzione inizia la simulazione DLA.
+ * La simulazione consiste in:
+ *  - un ciclo che simula il tempo, ogni tick è un'iterazione della simulazione
  *  - per ogni particella viene chiamata la funzione check_position che controlla se la particella è in prossimità di un cristallo,
- *    in caso affermativo blocca la particella e da quel momento inizia a far parte del cristallo. Altrimenti la particella si muove.
+ *    in caso affermativo setta un flag. Altrimenti la particella si muove.
  *  - nel caso in cui la particella non sia rimasta bloccata, viene chiamata la funzione move che si occupa di muoverla.
- *
- * L'algoritmo termina al raggiungimento di un valore t.
- * La funzione riceve in input il numero di particelle, la lista di particelle, le dimensioni della matrice e la matrice.
- * La funzione ritorna 0 se l'esecuzione è andata a buon fine, altrimenti ritorna 1.
- *
+ *  - se la particella è rimasta bloccata viene aggiornata la matrice al termine di ogni tick
+ * Al termine di ogni tick viene aggiornata la matrice.
+ * @param num_particles numero di particelle
+ * @param particles_list lista di particelle
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param matrix matrice di interi
+ * @param horizon numero di iterazioni massime
+ * @param sp lista di particelle bloccate
  */
 void start_DLA(int num_particles,
                particle *particles_list,
                int n, int m,
-               int **matrix, int horizon)
+               int **matrix, int horizon, stuckedParticles sp)
 {
     printf("Starting DLA\n");
+
+    // tick della simulazione
     for (int t = 0; t < horizon + 1; t++)
     {
-        // Itero per particelle per ogni iterazione
+        // itero su tutte le particelle
         for (int i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
             if (p->stuck <= 0)
             {
+                // controllo se la particella si aggrega o no
                 int isStuck = check_position(n, m, matrix, p, &sp);
                 if (isStuck == 0)
                 {
                     if (t < horizon)
+                        // muovo la particella
                         move(p, n, m);
                     else if (p->isOut == 0)
+                        // se sono all'ultima iterazione e la particella non è uscita dalla matrice la aggiungo alla matrice per il render finale
                         matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
         }
+        // aggiorno la matrice
+        // per ogni particella stucked scrivo 1 sulla matrice nella posizione della particella
         while (sp.size > 0)
         {
             particle p = sp_pop(&sp);
@@ -137,58 +196,69 @@ int main(int argc, char *argv[])
     int seed[2];       // seed position
     int num_particles; // numero di particelle
     int horizon;       // tempo di simulazione
+    int **matrix;
+    stuckedParticles sp; // lista di particelle bloccate
 
     double start, end, elapsed;
 
     get_args(argc, argv, &num_particles, &n, &m, seed, &horizon);
 
-    printf("seed %d, %d\n", seed[0], seed[1]);
+    printf("Initial seed position: %d, %d\n", seed[0], seed[1]);
 
-    int **matrix;
     matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
-        perror("Error allocating memory");
-
+    {
+        perror("Errore nell'allocazione della matrice. \n");
+        exit(1);
+    }
     for (int i = 0; i < n; i++)
     {
         matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
         if (matrix[i] == NULL)
-            perror("Error allocating memory");
+        {
+            perror("Errore nell'allocazione della matrice. \n");
+            exit(1);
+        }
     }
 
-    matrix[seed[1]][seed[0]] = 1; // set seed
+    matrix[seed[1]][seed[0]] = 1; // scrivo il seed sulla matrice
 
     // prendo la percentuale di quanto è satura
     // la matrice e la moltiplico per un fattore costante.
     float coefficient = ((float)num_particles / (float)(n * m)) * FACTOR;
     if (init_StuckedParticles(&sp, (int)coefficient) != 0)
-        perror("Error allocating memory");
-
+    {
+        perror("Errore nell'allocazione della lista di particelle bloccate. \n");
+        exit(1);
+    }
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
     if (particles_list == NULL)
-        perror("Error allocating memory");
+    {
+        perror("Errore durante l'allocazione della lista di particelle. \n");
+        exit(1);
+    }
 
-    srand(seed_rand); // set seed for random
+    srand(seed_rand); // setto il seed per la random
 
-    // create particles
+    // genero le particelle
     gen_particles(seed, num_particles, particles_list, n, m);
 
     GET_TIME(start);
 
     // start DLA
-    start_DLA(num_particles, particles_list, n, m, matrix, horizon);
+    start_DLA(num_particles, particles_list, n, m, matrix, horizon, sp);
 
     GET_TIME(end);
 
     elapsed = (double)(end - start);
-    printf("time: %f\n", elapsed);
+    printf("Elapsed time: %f seconds \n", elapsed);
 
+    // ----- TIME ----- //
     FILE *elapsed_time = fopen("./times/time_dla_single_thread.txt", "a");
     fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
 
-    write_matrix(n, m, matrix);
-
+    // ----- RENDER ----- //
     gdImagePtr img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);
