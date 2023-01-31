@@ -5,14 +5,13 @@
 #include <omp.h>
 #include "support_functions.c" // File con le funzioni comuni
 
-gdImagePtr img;    // oggetto immagine
+gdImagePtr img; // oggetto immagine
 
 int thread_count;  // numero di thread
 float coefficient; // coefficiente di aggregazione
 
-
-void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);              // Generatore di particelle
-void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // Funzione DLA
+void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);      // Generatore di particelle
+void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon); // Funzione DLA
 
 /*
  * gen_particles genera una lista di particelle con posizione casuale.
@@ -23,14 +22,14 @@ void start_DLA(int num_particles, particle *particles_list, int n, int m, int **
  */
 void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
-    // Per evitare una saturazione della matrice poniamo un limite alle particelle da generare 
+    // Per evitare una saturazione della matrice poniamo un limite alle particelle da generare
     if (num_particles >= n * m)
     {
         perror("Troppe particelle rispetto alla grandezza della matrice. \n");
         exit(3);
     }
     int i = 0;
-    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
+#pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
         // Allochiamo memoria per la posizione delle particelle
@@ -86,7 +85,7 @@ void start_DLA(int num_particles,
     {
         // Itero sulle particelle
         int i;
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
+#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -106,20 +105,23 @@ void start_DLA(int num_particles,
                 }
             }
         }
-        // Barrier per evitare che determinati thread passino all'iterazione successiva prima di altri
-        #pragma omp barrier
+// Barrier per evitare che determinati thread passino all'iterazione successiva prima di altri
+#pragma omp barrier
         int j;
-        // Svuoto l'array delle particelle stucked
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
+// Svuoto l'array delle particelle stucked
+#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
         for (j = 0; j < sp.size; j++)
         {
             // Rimuovo la particella dall'array
             particle p = sp_pop(&sp);
-            // Modifico la matrice con un operazzione atomica per evitare concorrenza
-            #pragma omp atomic write
-            matrix[p.current_position->y][p.current_position->x] = 1;
+            if (p.current_position != NULL)
+            {
+// Modifico la matrice con un operazzione atomica per evitare concorrenza
+#pragma omp atomic write
+                matrix[p.current_position->y][p.current_position->x] = 1;
+            }
         }
-        #pragma omp barrier
+#pragma omp barrier
     }
 
     if (sp_destroy(&sp) != 0)
@@ -145,11 +147,11 @@ int main(int argc, char *argv[])
 
     // Calcolo il coefficente della realloc per l'array delle particelle stucked
     coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / thread_count;
-
+    printf("coefficient: %f\n", coefficient);
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0
-    matrix = (int **)malloc(n * sizeof(int *)); 
+    matrix = (int **)malloc(n * sizeof(int *));
     if (matrix == NULL)
     {
         perror("Errore nell'allocazione di memoria per la matrice");
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
     }
 
     // Metto il seed nella matrice
-    matrix[seed[0]][seed[1]] = 1; 
+    matrix[seed[1]][seed[0]] = 1;
 
     // Alloco la lista di tutte le particelle
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
@@ -190,7 +192,7 @@ int main(int argc, char *argv[])
     FILE *elapsed_time = fopen("./times/time_dla_openmp.txt", "a");
     fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
-    
+
     // Creo l'immagine della matrice
     img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
