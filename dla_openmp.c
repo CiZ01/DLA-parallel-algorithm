@@ -127,7 +127,7 @@ void start_DLA(int num_particles,
         perror("Error nella distruzione della stuckedParticles list. \n");
         exit(1);
     }
-    
+
     printf("Finished DLA\n");
 }
 
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0
-    matrix = (int **)calloc(n, sizeof(int *)); 
+    matrix = (int **)malloc(n, sizeof(int *)); 
     if (matrix == NULL)
     {
         perror("Errore nell'allocazione di memoria per la matrice");
