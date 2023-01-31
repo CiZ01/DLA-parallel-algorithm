@@ -131,10 +131,9 @@ void *start_DLA_parallel(void *rank)
             particle p = sp_pop(&stucked_particles);
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
-        printf("%d.Finished: %d \n", (int)my_rank, stucked_particles.size);
         pthread_barrier_wait(&barrier);
     }
-
+    
     // FINALIZE THREAD //
 
     // free memory
