@@ -218,5 +218,9 @@ int main(int argc, char *argv[])
         free(particles_list);
     printf("particles_list \n"); // Libero la memoria dalla lista di particelle
 
+    if (img != NULL)
+        gdImageDestroy(img); // Libera la memoria dell'immagine
+    printf("gdImage pointer, ");
+
     return 0;
 }
