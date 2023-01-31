@@ -60,6 +60,7 @@ int sp_append(stuckedParticles *sp, particle p);
 particle sp_pop(stuckedParticles *sp);
 int sp_destroy(stuckedParticles *sp);
 void createImage(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename);
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 
 /*
  * Inizializza la struttura stuckedParticles.
@@ -69,13 +70,13 @@ void createImage(gdImagePtr img, int width, int height, int **matrix, int *color
  */
 int init_StuckedParticles(stuckedParticles *sp, int capacity)
 {
-    sp->data = (particle *)malloc((capacity+1) * sizeof(particle));
+    sp->data = (particle *)malloc(capacity * sizeof(particle));
     if (sp->data == NULL)
     {
         return -1;
     }
     sp->size = 0;
-    sp->capacity = (int)capacity+1;
+    sp->capacity = (int)capacity;
     return 0;
 }
 
@@ -125,7 +126,6 @@ particle sp_pop(stuckedParticles *sp)
  */
 int sp_destroy(stuckedParticles *sp)
 {
-    printf("%p", sp->data);
     if (sp->data != NULL)
     {
         free(sp->data);
@@ -197,6 +197,44 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
     }
 }
 
+/*
+ * Controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
+ * @param matrix: matrice di interi
+ * @param p: particella
+ * @param sp: lista di particelle bloccate
+ * @return 0 se la particella non è rimasta bloccata, -1 se la particella è rimasta bloccata
+ */
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
+{
+    if (p->isOut == 1)
+    {
+        return 0;
+    }
+
+    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
+
+    for (int i = 0; i < 8; i += 2)
+    {
+        int near_y = p->current_position->y + directions[i];
+        int near_x = p->current_position->x + directions[i + 1];
+        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
+        {
+            if (matrix[near_y][near_x] == 1)
+            {
+                if (sp_append(sp, *p) != 0)
+                {
+                    perror("Errore durante l'aggiunta della particella nella lista \n");
+                    exit(1);
+                }
+                p->stuck = 1;
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
 
 /*
  * Muove la particella in una direzione pseudocasuale, utilizza una reentrant random.
