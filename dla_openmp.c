@@ -11,7 +11,7 @@ int thread_count;  // numero di thread
 float coefficient; // coefficiente di aggregazione
 
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);                     // Controllo posizione
-void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);              // Generatore di particelle
+void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);              // Generatore di particelle
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // Funzione DLA
 
 
@@ -20,7 +20,6 @@ void start_DLA(int num_particles, particle *particles_list, int n, int m, int **
  * La funzione ritorna un intero che indica se la particella è rimasta bloccata o meno.
  * Se la particella è rimasta bloccata, la funzione ritorna -1, altrimenti ritorna 0.
  * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
- * La funzione modifica la matrice e la particella SOLO se la particella è rimasta bloccata.
  */
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
@@ -61,7 +60,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  * La funzione ritorna un errore nel caso in cui non riesca ad allocare memoria per la posizione della particella e per lo storico dei movimenti.
  * La funzione modifica la lista di particelle.
  */
-void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
+void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
     // Per evitare una saturazione della matrice poniamo un limite alle particelle da generare 
     if (num_particles >= n * m)
@@ -204,7 +203,7 @@ int main(int argc, char *argv[])
         exit(1);
 
     // Genero tutte le particelle e le inserisco nell'array
-    gen_particles(seed, num_particles, particles_list, n, m);
+    gen_particles_openMP(seed, num_particles, particles_list, n, m);
 
     // start DLA e calcolo il tempo di esecuzione per i test
     double start = omp_get_wtime();
