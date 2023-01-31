@@ -89,8 +89,12 @@ void *start_DLA_parallel(void *rank)
 
     stuckedParticles stucked_particles; // lista di particelle bloccate
 
+
+    float perc = ((float)num_particles / (float)(n*m)) * 100;
+    int cap = (int)(((float)perc * (float)num_particles) / 100);
+
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, (int)(num_particles/2)) != 0)
+    if (init_StuckedParticles(&stucked_particles, (int)cap) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);

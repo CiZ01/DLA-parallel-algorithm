@@ -222,8 +222,10 @@ int main(int argc, char *argv[])
     }
 
     matrix[seed[1]][seed[0]] = 1; // scrivo il seed sulla matrice
+    float perc = ((float)num_particles / (float)(n * m)) * 100;
+    int cap = (int)(((float)perc * (float)num_particles) / 100);
 
-    if (init_StuckedParticles(&sp, (int)(num_particles/2)) != 0)
+    if (init_StuckedParticles(&sp, (int)cap) != 0)
     {
         perror("Errore nell'allocazione della lista di particelle bloccate. \n");
         exit(1);
@@ -256,7 +258,7 @@ int main(int argc, char *argv[])
     fclose(elapsed_time);
 
     // ----- RENDER ----- //
-    
+
     gdImagePtr img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);

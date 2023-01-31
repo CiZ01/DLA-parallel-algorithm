@@ -7,7 +7,7 @@
 
 gdImagePtr img; // oggetto immagine
 
-int thread_count;  // numero di thread
+int thread_count; // numero di thread
 
 void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);      // Generatore di particelle
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon); // Funzione DLA
@@ -30,7 +30,7 @@ void gen_particles_openMP(int *seed, int num_particles, particle *particles_list
         exit(3);
     }
     int i = 0;
-    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
+#pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
         // Allochiamo memoria per la posizione delle particelle
@@ -78,7 +78,9 @@ void start_DLA(int num_particles,
     stuckedParticles sp; // Lista di particelle bloccate
 
     // Inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&sp, (int)(num_particles/2)) != 0)
+    float perc = ((float)num_particles / (float)(n*m)) * 100;
+    int cap = (int)(((float)perc * (float)num_particles) / 100);
+    if (init_StuckedParticles(&sp, cap) != 0)
     {
         perror("Errore nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -88,7 +90,7 @@ void start_DLA(int num_particles,
     {
         // Itero sulle particelle
         int i;
-        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
+#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];

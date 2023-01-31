@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <gd.h>
+#include <omp.h>
 
 #define NUM_THREADS 4
 #define HORIZON 1000
@@ -156,7 +157,7 @@ int sp_append(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
     {
-        printf("ERRORE \n");
+        perror(" Errore nell'append \n");
         exit(10);
     }
     sp->data[sp->size + 1] = p;
