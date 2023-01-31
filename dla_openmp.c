@@ -149,6 +149,7 @@ void start_DLA(int num_particles,
         for (j = 0; j < sp.size; j++)
         {
             particle p = sp_pop(&sp);
+            #pragma omp atomic write
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
         #pragma omp barrier
