@@ -14,7 +14,7 @@ int seed[2];               // seed
 int **matrix;             // matrice di interi
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
-float coefficent; // coefficiente di aggregazione
+float coefficient; // coefficiente di aggregazione
 
 gdImagePtr p_img; // puntatore all'immagine
 
@@ -121,7 +121,7 @@ void *start_DLA_parallel(void *rank)
     stuckedParticles stucked_particles; // lista di particelle bloccate
 
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, (int)coefficent) != 0)
+    if (init_StuckedParticles(&stucked_particles, (int)coefficient) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -159,8 +159,14 @@ void *start_DLA_parallel(void *rank)
         while (stucked_particles.size > 0)
         {
             particle p = sp_pop(&stucked_particles);
+<<<<<<< HEAD
             matrix[p.current_position->y][p.current_position->x] = 1;
+=======
+            matrix[p.current_position->y][p.current_position->x].value = 1;
+            printf("size: %d \n", stucked_particles.size);
+>>>>>>> b01277bef390693b4936210d47184155ee697cf1
         }
+        printf("%d.Finished: %d \n", (int)my_rank, stucked_particles.size);
         pthread_barrier_wait(&barrier);
     }
 
@@ -192,8 +198,14 @@ int main(int argc, char *argv[])
     // recupero i parametri da riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
+<<<<<<< HEAD
     // calcolo il coefficiente con cui inizializzare la lista delle particelle stucked
     coefficent = ((num_particles * horizon) / (n * m)) * (0.2 / num_threads);
+=======
+    // da calibrare
+    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / num_threads;
+    printf("coefficient: %f\n", coefficient);
+>>>>>>> b01277bef390693b4936210d47184155ee697cf1
 
     // Alloca un array di puntatori a interi per ogni riga
     matrix = (int **)malloc(n * sizeof(int *)); 

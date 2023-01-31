@@ -7,6 +7,7 @@
 
 #define NUM_THREADS 4
 #define HORIZON 1000
+#define FACTOR 1.5
 
 unsigned int gen_rand = 586761;
 int seed_rand = 586761;
@@ -88,12 +89,13 @@ int sp_append(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
     {
-        sp->data = (particle *)realloc(sp->data, (sp->capacity * 2) * sizeof(particle));
+        printf("reallocating memory \n");
+        sp->data = (particle *)realloc(sp->data, (int)(sp->capacity * 3) * sizeof(particle));
         if (sp->data == NULL)
         {
             return -1;
         }
-        sp->capacity = (int)sp->capacity * 2;
+        sp->capacity = (int)sp->capacity * 3;
     }
     sp->data[sp->size + 1] = p;
     sp->size++;

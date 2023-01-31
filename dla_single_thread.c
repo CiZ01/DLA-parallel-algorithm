@@ -158,9 +158,10 @@ int main(int argc, char *argv[])
 
     matrix[seed[1]][seed[0]] = 1; // set seed
 
-    int coefficent = (int)(num_particles * horizon) / (n * m);
-
-    if (init_StuckedParticles(&sp, coefficent) != 0)
+    // prendo la percentuale di quanto è satura
+    // la matrice e la moltiplico per un fattore costante.
+    float coefficient = ((float)num_particles / (float)(n * m)) * FACTOR;
+    if (init_StuckedParticles(&sp, (int)coefficient) != 0)
         perror("Error allocating memory");
 
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
