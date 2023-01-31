@@ -31,7 +31,7 @@ void gen_particles_openMP(int *seed, int num_particles, particle *particles_list
         exit(3);
     }
     int i = 0;
-#pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
+    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
         // Allochiamo memoria per la posizione delle particelle
@@ -89,7 +89,7 @@ void start_DLA(int num_particles,
     {
         // Itero sulle particelle
         int i;
-#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
@@ -109,23 +109,20 @@ void start_DLA(int num_particles,
                 }
             }
         }
-// Barrier per evitare che determinati thread passino all'iterazione successiva prima di altri
-#pragma omp barrier
-        int j;
-// Svuoto l'array delle particelle stucked
-#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
-        for (j = 0; j < sp.size; j++)
+        // Barrier per evitare che determinati thread passino all'iterazione successiva prima di altri
+        // Svuoto l'array delle particelle stucked
+        while (sp.size > 0)
         {
-            // Rimuovo la particella dall'array
             particle p = sp_pop(&sp);
             if (p.current_position != NULL)
+<<<<<<< HEAD
             {
                 // Modifico la matrice con un operazzione atomica per evitare concorrenza
                 #pragma omp atomic write
+=======
+>>>>>>> 81715cfd6e013699fe24c0af048fffd18a82494c
                 matrix[p.current_position->y][p.current_position->x] = 1;
-            }
         }
-#pragma omp barrier
     }
 
     if (sp_destroy(&sp) != 0)
@@ -150,7 +147,7 @@ int main(int argc, char *argv[])
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
 
     // Calcolo il coefficente della realloc per l'array delle particelle stucked
-    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / thread_count;
+    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / (thread_count*0.5);
     printf("coefficient: %f\n", coefficient);
     printf("seed %d, %d\n", seed[0], seed[1]);
 
