@@ -10,48 +10,9 @@ gdImagePtr img;    // oggetto immagine
 int thread_count;  // numero di thread
 float coefficient; // coefficiente di aggregazione
 
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);                     // Controllo posizione
+
 void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);              // Generatore di particelle
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // Funzione DLA
-
-
-/*
- * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
- * La funzione ritorna un intero che indica se la particella è rimasta bloccata o meno.
- * Se la particella è rimasta bloccata, la funzione ritorna -1, altrimenti ritorna 0.
- * La funzione riceve in input le dimensioni della matrice, la matrice e la particella interessata.
- */
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
-{
-    // Se la particella è fuori dalla matrice non fa il controllo
-    if (p->isOut == 1)
-    {
-        return 0;
-    }
-
-    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    // Controllo per ogni diretzione se la particella è vicino al cristallo
-    for (int i = 0; i < 8; i += 2)
-    {
-        int near_y = p->current_position->y + directions[i];
-        int near_x = p->current_position->x + directions[i + 1];
-        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
-        {
-            if (matrix[near_y][near_x] == 1)
-            {
-                // Aggiungo la particella alla lista delle particelle stucked
-                if (sp_append(sp, *p) != 0)
-                {
-                    perror("Error nell'append della stuckedParticles list. \n");
-                    exit(1);
-                }
-                p->stuck = 1;
-                return -1;
-            }
-        }
-    }
-    return 0;
-}
 
 /*
  * gen_particles genera una lista di particelle con posizione casuale.
@@ -160,6 +121,13 @@ void start_DLA(int num_particles,
         }
         #pragma omp barrier
     }
+
+    if (sp_destroy(&sp) != 0)
+    {
+        perror("Error nella distruzione della stuckedParticles list. \n");
+        exit(1);
+    }
+
     printf("Finished DLA\n");
 }
 
@@ -181,7 +149,7 @@ int main(int argc, char *argv[])
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0
-    matrix = (int **)calloc(n, sizeof(int *)); 
+    matrix = (int **)malloc(n * sizeof(int *)); 
     if (matrix == NULL)
     {
         perror("Errore nell'allocazione di memoria per la matrice");
@@ -256,6 +224,10 @@ int main(int argc, char *argv[])
     if (particles_list != NULL)
         free(particles_list);
     printf("particles_list \n"); // Libero la memoria dalla lista di particelle
+
+    if (img != NULL)
+        gdImageDestroy(img); // Libera la memoria dell'immagine
+    printf("gdImage pointer, ");
 
     return 0;
 }
