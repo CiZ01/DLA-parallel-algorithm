@@ -121,6 +121,13 @@ void start_DLA(int num_particles,
         }
         #pragma omp barrier
     }
+
+    if (sp_destroy(&sp) != 0)
+    {
+        perror("Error nella distruzione della stuckedParticles list. \n");
+        exit(1);
+    }
+    
     printf("Finished DLA\n");
 }
 
