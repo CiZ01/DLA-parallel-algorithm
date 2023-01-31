@@ -1,20 +1,11 @@
 #!/bin/python3
 
 import subprocess
-#import myplot as plot
-from decouple import config
-import keyring
 
-from knockknock import email_sender
 
 EXE_FILENAMES = ("dla_single_thread", "dla_pthread", "dla_openmp")
 numTests = 5
 times = []
-
-sender = config('SENDER')
-receiver = config('RECEIVER')
-psswd = config('PASSWORD')
-
 
 def run_test(configurations: list) -> tuple:
     for config in configurations:
@@ -52,7 +43,6 @@ def run_test(configurations: list) -> tuple:
     return 0, 0
 
 
-#@email_sender(recipient_emails=[receiver], sender_email=sender)
 def main():
     for i in range(3):
         with open(f"times/time_{EXE_FILENAMES[i]}.txt", "w") as f:
@@ -79,9 +69,7 @@ def main():
     with open(f"./times/history.txt", "a") as f:
         f.write(f"{configurations} \n {times} \n \n")
 
-    # plot.getPlot(numTests,
-    #              times,
-    #              configurations)
+
 
 
 if __name__ == "__main__":
