@@ -70,13 +70,13 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  */
 int init_StuckedParticles(stuckedParticles *sp, int capacity)
 {
-    sp->data = (particle *)malloc(capacity * sizeof(particle));
+    sp->data = (particle *)malloc((capacity + 1) * sizeof(particle));
     if (sp->data == NULL)
     {
         return -1;
     }
     sp->size = 0;
-    sp->capacity = (int)capacity;
+    sp->capacity = (int)capacity + 1;
     return 0;
 }
 
