@@ -85,7 +85,7 @@ void gen_particles_openMP(int *seed, int num_particles, particle *particles_list
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
             // Controllo che la particella non venga generata sul seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
-        particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
+        particles_list[i].dire = 0;
         particles_list[i].stuck = 0;
         particles_list[i].isOut = 0;
     }
@@ -130,7 +130,7 @@ void start_DLA(int num_particles,
         {
             particle *p = &particles_list[i];
             // Se la particella non è stuck
-            if (p->stuck = 0)
+            if (p->stuck == 0)
             {
                 // Controllo la posizione
                 int isStuck = check_position(n, m, matrix, p, &sp);
@@ -183,14 +183,18 @@ int main(int argc, char *argv[])
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0
     matrix = (int **)calloc(n, sizeof(int *)); 
     if (matrix == NULL)
+    {
         perror("Errore nell'allocazione di memoria per la matrice");
         exit(1);
+    }
     for (int i = 0; i < n; i++)
     {
         matrix[i] = (int *)calloc(m, sizeof(int));
         if (matrix[i] == NULL)
+        {
             perror("Errore nell'allocazione di memoria per la matrice");
             exit(1);
+        }
     }
 
     // Metto il seed nella matrice
@@ -199,9 +203,10 @@ int main(int argc, char *argv[])
     // Alloco la lista di tutte le particelle
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
     if (particles_list == NULL)
+    {
         perror("Errore nell'allocazione di memoria per la lista di particella");
         exit(1);
-
+    }
     // Genero tutte le particelle e le inserisco nell'array
     gen_particles_openMP(seed, num_particles, particles_list, n, m);
 
@@ -227,7 +232,7 @@ int main(int argc, char *argv[])
     int red = gdImageColorAllocate(img, 255, 0, 0);
     int colors[] = {black, red};
 
-    createImage_intMatrix(img, m, n, matrix, colors, "DLA_openmp.jpg");
+    createImage(img, m, n, matrix, colors, "DLA_openmp.jpg");
 
     // Libero la memoria
     printf("Memoria liberata per: ");
