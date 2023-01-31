@@ -3,16 +3,16 @@
 #include <string.h>
 #include <errno.h>
 #include <omp.h>
-#include "support_functions.c"
+#include "support_functions.c" // File con le funzioni comuni
 
 gdImagePtr img;    // oggetto immagine
 
 int thread_count;  // numero di thread
 float coefficient; // coefficiente di aggregazione
 
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);                     // controllo posizione
-void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);              // generatore di particelle
-void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // funzione DLA
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);                     // Controllo posizione
+void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);              // Generatore di particelle
+void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // Funzione DLA
 
 
 /*
@@ -24,14 +24,14 @@ void start_DLA(int num_particles, particle *particles_list, int n, int m, int **
  */
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
-    // se la particella è fuori dalla matrice non fa il controllo
+    // Se la particella è fuori dalla matrice non fa il controllo
     if (p->isOut == 1)
     {
         return 0;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-    // controllo per ogni diretzione se la particella è vicino al cristallo
+    // Controllo per ogni diretzione se la particella è vicino al cristallo
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -40,7 +40,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
-                //aggiungo la particella alla lista delle particelle stucked
+                // Aggiungo la particella alla lista delle particelle stucked
                 if (sp_append(sp, *p) != 0)
                 {
                     perror("Error nell'append della stuckedParticles list. \n");
@@ -63,29 +63,28 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  */
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
-    /* 
-     * Per evitare una saturazione della matrice poniamo un limite
-     * alle particelle da generare
-     */ 
+    // Per evitare una saturazione della matrice poniamo un limite alle particelle da generare 
     if (num_particles >= n * m)
     {
-        perror("Too many particles for the matrix size. \n");
+        perror("Troppe particelle rispetto alla grandezza della matrice. \n");
+        exit(3);
     }
     int i = 0;
-#pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
+    #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
-        // allochiamo memoria per la posizione delle particelle
+        // Allochiamo memoria per la posizione delle particelle
         particles_list[i].current_position = malloc(sizeof(position));
         if (particles_list[i].current_position == NULL)
         {
-            perror("Error allocating memory for current_position. \n");
+            perror("Errore nell'allocazione di memoria per la current_position. \n");
+            exit(1);
         }
         do
         {
             particles_list[i].current_position->x = rand_r(&gen_rand) % m;
             particles_list[i].current_position->y = rand_r(&gen_rand) % n;
-            // check if the particle is not in the same position of the seed
+            // Controllo che la particella non venga generata sul seed
         } while (seed[0] == particles_list[i].current_position->x && seed[1] == particles_list[i].current_position->y);
         particles_list[i].dire = rand_r(&gen_rand) % 2 == 0 ? 1 : -1;
         particles_list[i].stuck = 0;
@@ -114,12 +113,12 @@ void start_DLA(int num_particles,
 {
     printf("Starting DLA\n");
 
-    stuckedParticles sp; // lista di particelle bloccate
+    stuckedParticles sp; // Lista di particelle bloccate
 
-    // inizializzo la lista delle particelle bloccate
+    // Inizializzo la lista delle particelle bloccate
     if (init_StuckedParticles(&sp, (int)coefficient) != 0)
     {
-        perror("Error nell'inizializazione della stuckedParticles list. \n");
+        perror("Errore nell'inizializazione della stuckedParticles list. \n");
         exit(1);
     }
 
@@ -127,28 +126,36 @@ void start_DLA(int num_particles,
     {
         // Itero per particelle per ogni iterazione
         int i;
-#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
         {
             particle *p = &particles_list[i];
-            if (p->stuck <= 0)
+            // Se la particella non è stuck
+            if (p->stuck = 0)
             {
+                // Controllo la posizione
                 int isStuck = check_position(n, m, matrix, p, &sp);
                 if (isStuck == 0)
                 {
+                    // if and else per fare un ulitmo check se qualche particella si è stuckata
                     if (t < horizon)
                         move_parallel(p, n, m);
                     else if (p->isOut == 0)
+                        // Coloro la matrice per tracciare le particelle
                         matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
         }
+        // Barrier per evitare che determinati thread passino all'iterazione successiva prima di altri
         #pragma omp barrier
         int j;
+        // Svuoto l'array delle particelle stucked
         #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
         for (j = 0; j < sp.size; j++)
         {
+            // Rimuovo la particella dall'array
             particle p = sp_pop(&sp);
+            // Modifico la matrice con un operazzione atomica per evitare concorrenza
             #pragma omp atomic write
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
@@ -160,39 +167,46 @@ void start_DLA(int num_particles,
 int main(int argc, char *argv[])
 {
 
-    int n, m;          // matrix dimensions
-    int seed[2];       // seed position
-    int num_particles; // number of particles
-    int horizon;       // horizon
-    int **matrix;      // matri
+    int n, m;          // Dimensioni matrice
+    int seed[2];       // Posizione seed
+    int num_particles; // numero di particelle
+    int horizon;       // Orizonte o tempo di esecuzione
+    int **matrix;      // Dichiaro la matrice
 
+    // Prendo gli argomenti dalla riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
 
+    // Calcolo il coefficente della realloc per l'array delle particelle stucked
     coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / thread_count;
 
     printf("seed %d, %d\n", seed[0], seed[1]);
 
-    matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    // Alloco un array di puntatori e inizializza tutti gli elementi a 0
+    matrix = (int **)calloc(n, sizeof(int *)); 
     if (matrix == NULL)
-        perror("Error allocating memory");
-
+        perror("Errore nell'allocazione di memoria per la matrice");
+        exit(1);
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = (int *)calloc(m, sizeof(int)); // Alloca un array di interi per ogni riga e inizializza tutti gli elementi a 0
+        matrix[i] = (int *)calloc(m, sizeof(int));
         if (matrix[i] == NULL)
-            perror("Error allocatingx memory");
+            perror("Errore nell'allocazione di memoria per la matrice");
+            exit(1);
     }
 
-    matrix[seed[0]][seed[1]] = 1; // set seed
+    // Metto il seed nella matrice
+    matrix[seed[0]][seed[1]] = 1; 
 
+    // Alloco la lista di tutte le particelle
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
     if (particles_list == NULL)
-        perror("Error allocating memory");
+        perror("Errore nell'allocazione di memoria per la lista di particella");
+        exit(1);
 
-    // create particles
+    // Genero tutte le particelle e le inserisco nell'array
     gen_particles(seed, num_particles, particles_list, n, m);
 
-    // start DLA
+    // start DLA e calcolo il tempo di esecuzione per i test
     double start = omp_get_wtime();
     start_DLA(num_particles, particles_list, n, m, matrix, horizon);
     double end = omp_get_wtime();
@@ -200,46 +214,44 @@ int main(int argc, char *argv[])
     double elapsed = (double)(end - start);
 
     printf("il tempo impiegato per il DLA è: %f \n", elapsed);
-
+    // Salvo i tempi di esecuzione
     FILE *elapsed_time = fopen("./times/time_dla_openmp.txt", "a");
     fprintf(elapsed_time, "%f\n", elapsed);
     fclose(elapsed_time);
-    // -----SAVE DATA----- //
-
+    
+    // Creo l'immagine della matrice
     img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);
 
     int black = gdImageColorAllocate(img, 0, 0, 0);
     int red = gdImageColorAllocate(img, 255, 0, 0);
-
     int colors[] = {black, red};
 
-    // filename a caso da sistemare
     createImage_intMatrix(img, m, n, matrix, colors, "DLA_openmp.jpg");
-    // -----FINALIZE----- //
 
-    printf("freed memory: ");
+    // Libero la memoria
+    printf("Memoria liberata per: ");
     for (int i = 0; i < n; i++)
     {
         if (matrix[i] != NULL)
-            free(matrix[i]); // Libera la memoria della riga i-esima
+            free(matrix[i]); // Libero la memoria della riga i-esima
     }
 
-    printf("matrix, ");
+    printf("la matrice, ");
     if (matrix != NULL)
-        free(matrix); // Libera la memoria dell'array di puntatori
+        free(matrix); // Libero la memoria dell'array di puntatori
 
     for (int i = 0; i < num_particles; i++)
     {
         if (particles_list[i].current_position != NULL)
-            free(particles_list[i].current_position);
+            free(particles_list[i].current_position); // Libero la memoria della current position
     }
-    printf("particles's path and current_position, ");
+    printf("current position, ");
 
     if (particles_list != NULL)
         free(particles_list);
-    printf("particles_list \n");
+    printf("particles_list \n"); // Libero la memoria dalla lista di particelle
 
     return 0;
 }
