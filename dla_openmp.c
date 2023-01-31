@@ -120,10 +120,10 @@ void start_DLA(int num_particles,
         perror("Errore nell'inizializazione della stuckedParticles list. \n");
         exit(1);
     }
-
+    // Itero per ogni tick
     for (int t = 0; t < horizon + 1; t++)
     {
-        // Itero per particelle per ogni iterazione
+        // Itero sulle particelle
         int i;
         #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix)
         for (i = 0; i < num_particles; i++)
