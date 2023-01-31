@@ -5,12 +5,15 @@
 #include <omp.h>
 #include "support_functions.c"
 
-gdImagePtr img;
+gdImagePtr img;    // oggetto immagine
 
 int thread_count;  // numero di thread
 float coefficient; // coefficiente di aggregazione
 
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);                     // controllo posizione
+void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m);              // generatore di particelle
+void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // funzione DLA
+
 
 /*
  * check_position controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
@@ -21,13 +24,14 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  */
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
+    // se la particella è fuori dalla matrice non fa il controllo
     if (p->isOut == 1)
     {
         return 0;
     }
 
     int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
-
+    // controllo per ogni diretzione se la particella è vicino al cristallo
     for (int i = 0; i < 8; i += 2)
     {
         int near_y = p->current_position->y + directions[i];
@@ -36,6 +40,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
+                //aggiungo la particella alla lista delle particelle stucked
                 if (sp_append(sp, *p) != 0)
                 {
                     perror("Error nell'append della stuckedParticles list. \n");
@@ -58,6 +63,10 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  */
 void gen_particles(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
+    /* 
+     * Per evitare una saturazione della matrice poniamo un limite
+     * alle particelle da generare
+     */ 
     if (num_particles >= n * m)
     {
         perror("Too many particles for the matrix size. \n");
@@ -66,7 +75,7 @@ void gen_particles(int *seed, int num_particles, particle *particles_list, int n
 #pragma omp parallel for num_threads(thread_count) shared(gen_rand, particles_list)
     for (i = 0; i < num_particles; i++)
     {
-        // allocate memory for particle position
+        // allochiamo memoria per la posizione delle particelle
         particles_list[i].current_position = malloc(sizeof(position));
         if (particles_list[i].current_position == NULL)
         {
@@ -134,15 +143,15 @@ void start_DLA(int num_particles,
                 }
             }
         }
-#pragma omp barrier
+        #pragma omp barrier
         int j;
-#pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
+        #pragma omp parallel for num_threads(thread_count) shared(particles_list, matrix, sp)
         for (j = 0; j < sp.size; j++)
         {
             particle p = sp_pop(&sp);
             matrix[p.current_position->y][p.current_position->x] = 1;
         }
-#pragma omp barrier
+        #pragma omp barrier
     }
     printf("Finished DLA\n");
 }
