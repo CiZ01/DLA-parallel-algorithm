@@ -120,8 +120,8 @@ void start_DLA(int num_particles,
             particle p = sp_pop(&sp);
             if (p.current_position != NULL)
             {
-// Modifico la matrice con un operazzione atomica per evitare concorrenza
-#pragma omp atomic write
+                // Modifico la matrice con un operazzione atomica per evitare concorrenza
+                #pragma omp atomic write
                 matrix[p.current_position->y][p.current_position->x] = 1;
             }
         }
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
 
     if (img != NULL)
         gdImageDestroy(img); // Libera la memoria dell'immagine
-    printf("gdImage pointer, ");
+    printf("gdImage pointer");
 
     return 0;
 }

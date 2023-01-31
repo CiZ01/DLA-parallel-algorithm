@@ -133,7 +133,7 @@ void *start_DLA_parallel(void *rank)
         }
         pthread_barrier_wait(&barrier);
     }
-    
+
     // FINALIZE THREAD //
 
     // free memory
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 
     // prendo la percentuale di quanto è satura la matrice e la moltiplico per un fattore costante.
     // dal momento che istanzio una lista di particelle stucked per ogni thread, divido il risultato per il numero di threads
-    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / num_threads;
+    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / (num_threads*0.5);
 
     // Alloca un array di puntatori a interi per ogni riga
     matrix = (int **)malloc(n * sizeof(int *));
