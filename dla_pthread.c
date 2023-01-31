@@ -13,7 +13,6 @@ int seed[2];               // seed
 int **matrix;              // matrice di interi
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
 
-float coefficient; // coefficiente di aggregazione
 
 gdImagePtr p_img; // puntatore all'immagine
 
@@ -91,7 +90,7 @@ void *start_DLA_parallel(void *rank)
     stuckedParticles stucked_particles; // lista di particelle bloccate
 
     // inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&stucked_particles, (int)coefficient) != 0)
+    if (init_StuckedParticles(&stucked_particles, (int)(num_particles/2)) != 0)
     {
         perror("Error nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -162,9 +161,6 @@ int main(int argc, char *argv[])
     // recupero i parametri da riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
 
-    // prendo la percentuale di quanto è satura la matrice e la moltiplico per un fattore costante.
-    // dal momento che istanzio una lista di particelle stucked per ogni thread, divido il risultato per il numero di threads
-    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / (num_threads*0.5);
 
     // Alloca un array di puntatori a interi per ogni riga
     matrix = (int **)malloc(n * sizeof(int *));

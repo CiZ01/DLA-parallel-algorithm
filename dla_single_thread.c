@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
     printf("Initial seed position: %d, %d\n", seed[0], seed[1]);
 
-    matrix = (int **)malloc(n * sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
+    matrix = (int **)calloc(n, sizeof(int *)); // Alloca un array di puntatori e inizializza tutti gli elementi a 0
     if (matrix == NULL)
     {
         perror("Errore nell'allocazione della matrice. \n");
@@ -223,11 +223,7 @@ int main(int argc, char *argv[])
 
     matrix[seed[1]][seed[0]] = 1; // scrivo il seed sulla matrice
 
-    // prendo la percentuale di quanto è satura
-    // la matrice e la moltiplico per un fattore costante.
-    float coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR);
-
-    if (init_StuckedParticles(&sp, (int)coefficient) != 0)
+    if (init_StuckedParticles(&sp, (int)(num_particles/2)) != 0)
     {
         perror("Errore nell'allocazione della lista di particelle bloccate. \n");
         exit(1);
@@ -260,6 +256,7 @@ int main(int argc, char *argv[])
     fclose(elapsed_time);
 
     // ----- RENDER ----- //
+    
     gdImagePtr img = gdImageCreate(m, n);
     int white = gdImageColorAllocate(img, 255, 255, 255);
     gdImageFilledRectangle(img, 0, 0, m, n, white);

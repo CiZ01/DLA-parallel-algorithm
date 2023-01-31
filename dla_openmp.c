@@ -8,7 +8,6 @@
 gdImagePtr img; // oggetto immagine
 
 int thread_count;  // numero di thread
-float coefficient; // coefficiente di aggregazione
 
 void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m);      // Generatore di particelle
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon); // Funzione DLA
@@ -79,7 +78,7 @@ void start_DLA(int num_particles,
     stuckedParticles sp; // Lista di particelle bloccate
 
     // Inizializzo la lista delle particelle bloccate
-    if (init_StuckedParticles(&sp, (int)coefficient) != 0)
+    if (init_StuckedParticles(&sp, (int)(num_particles/2)) != 0)
     {
         perror("Errore nell'inizializazione della stuckedParticles list. \n");
         exit(1);
@@ -115,12 +114,6 @@ void start_DLA(int num_particles,
         {
             particle p = sp_pop(&sp);
             if (p.current_position != NULL)
-<<<<<<< HEAD
-            {
-                // Modifico la matrice con un operazzione atomica per evitare concorrenza
-                #pragma omp atomic write
-=======
->>>>>>> 81715cfd6e013699fe24c0af048fffd18a82494c
                 matrix[p.current_position->y][p.current_position->x] = 1;
         }
     }
@@ -145,10 +138,6 @@ int main(int argc, char *argv[])
 
     // Prendo gli argomenti dalla riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &thread_count, &horizon);
-
-    // Calcolo il coefficente della realloc per l'array delle particelle stucked
-    coefficient = (float)(((float)num_particles / (float)(n * m) * 100) * FACTOR) / (thread_count*0.5);
-    printf("coefficient: %f\n", coefficient);
     printf("seed %d, %d\n", seed[0], seed[1]);
 
     // Alloco un array di puntatori e inizializza tutti gli elementi a 0

@@ -60,7 +60,72 @@ int sp_append(stuckedParticles *sp, particle p);
 particle sp_pop(stuckedParticles *sp);
 int sp_destroy(stuckedParticles *sp);
 void createImage(gdImagePtr img, int width, int height, int **matrix, int *colors, char *filename);
+
+// nodo della lista
+typedef struct node
+{
+    particle p;
+    struct node *next;
+    struct node *prev;
+} node;
+
+typedef struct
+{
+    struct node *head;
+    struct node *tail;
+    int size;
+} list;
+
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
+void init_list(list *l);
+void append(list *l, particle p);
+particle pop(list *l);
+
+void init_list(list *l)
+{
+    l->head = NULL;
+    l->tail = NULL;
+    l->size = 0;
+}
+
+void append(list *l, particle p)
+{
+    node *new_node = (node *)malloc(sizeof(node));
+    new_node->p = p;
+    new_node->next = NULL;
+    new_node->prev = NULL;
+
+    if (l->head == NULL)
+    {
+        l->head = new_node;
+        l->tail = new_node;
+    }
+    else
+    {
+        l->tail->next = new_node;
+        new_node->prev = l->tail;
+        l->tail = new_node;
+    }
+    l->size++;
+}
+
+particle pop(list *l)
+{
+    if (l->size == 0)
+    {
+        return (particle){NULL, 0, 0, 0};
+    }
+    particle p = l->tail->p;
+    node *tmp = l->tail;
+    l->tail = l->tail->prev;
+    if (l->tail != NULL)
+    {
+        l->tail->next = NULL;
+    }
+    free(tmp);
+    l->size--;
+    return p;
+}
 
 /*
  * Inizializza la struttura stuckedParticles.
@@ -70,7 +135,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
  */
 int init_StuckedParticles(stuckedParticles *sp, int capacity)
 {
-    sp->data = (particle *)calloc(capacity + 1 , sizeof(particle));
+    sp->data = (particle *)calloc(capacity + 1, sizeof(particle));
     if (sp->data == NULL)
     {
         return -1;
@@ -88,15 +153,10 @@ int init_StuckedParticles(stuckedParticles *sp, int capacity)
  */
 int sp_append(stuckedParticles *sp, particle p)
 {
-    if (sp->size == sp->capacity-1)
+    if (sp->size == sp->capacity - 1)
     {
-        if (sp->data != NULL)
-            sp->data = (particle *)realloc(sp->data, (int)(sp->capacity * 3) * sizeof(particle));
-        if (sp->data == NULL)
-        {
-            return -1;
-        }
-        sp->capacity = (int)sp->capacity * 3;
+        printf("ERRORE \n");
+        exit(10);
     }
     sp->data[sp->size + 1] = p;
     sp->size++;
@@ -224,11 +284,7 @@ int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp
         {
             if (matrix[near_y][near_x] == 1)
             {
-                if (sp_append(sp, *p) != 0)
-                {
-                    perror("Errore durante l'aggiunta della particella nella lista \n");
-                    exit(1);
-                }
+                sp_append(sp, *p);
                 p->stuck = 1;
                 return -1;
             }
@@ -267,7 +323,6 @@ void move_parallel(particle *p, int n, int m)
     }
 }
 
-
 // --------------- RENDER FUNCTIONS --------------- //
 /*
  * Crea l'immagine e la salva su file.
@@ -301,16 +356,15 @@ void createImage(gdImagePtr img, int width, int height, int **matrix, int *color
     fclose(out);
 }
 
-
 // --------- DEBUG FUNCTIONS --------- //
 
 /*
-* Scrive la matrice su un file di testo.
-* default filename `output/matrix.txt`. DEBUG
-* @param n numero di righe della matrice
-* @param m numero di colonne della matrice
-* @param matrix matrice da scrivere
-*/
+ * Scrive la matrice su un file di testo.
+ * default filename `output/matrix.txt`. DEBUG
+ * @param n numero di righe della matrice
+ * @param m numero di colonne della matrice
+ * @param matrix matrice da scrivere
+ */
 void write_matrix(int n, int m, int **matrix)
 {
     FILE *fptr;
@@ -335,7 +389,6 @@ void write_matrix(int n, int m, int **matrix)
     if (fclose(fptr))
         perror("Error closing file");
 }
-
 
 /*
  * Stampa la matrice su standard output. DEBUG
