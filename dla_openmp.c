@@ -15,11 +15,13 @@ void gen_particles_openMP(int *seed, int num_particles, particle *particles_list
 void start_DLA(int num_particles, particle *particles_list, int n, int m, int **matrix, int horizon);  // Funzione DLA
 
 /*
- * gen_particles genera una lista di particelle con posizione casuale.
- * La funzione riceve in input il numero di particelle da generare, il iniziale della simulazione, la lista di particelle e le misure della matrice.
- * La funzione ritorna un errore nel caso in cui il numero di particelle sia maggiore della dimensione della matrice.
- * La funzione ritorna un errore nel caso in cui non riesca ad allocare memoria per la posizione della particella e per lo storico dei movimenti.
+ * Genera una lista di particelle con posizione casuale.
  * La funzione modifica la lista di particelle.
+ * @param seed: posizione del seme
+ * @param num_particles: numero di particelle da generare
+ * @param particles_list: lista di particelle
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
  */
 void gen_particles_openMP(int *seed, int num_particles, particle *particles_list, int n, int m)
 {
@@ -54,17 +56,19 @@ void gen_particles_openMP(int *seed, int num_particles, particle *particles_list
 
 /*
  * start_DLA simula l'algoritmo DLA.
- * Printa la matrice una prima volta e poi simula il movimento di ogni particella per un valore t.
  * La simulazione del movimento consiste:
  *  - in un ciclo che scorre tutte le particelle
  *  - per ogni particella viene chiamata la funzione check_position che controlla se la particella è in prossimità di un cristallo,
- *    in caso affermativo blocca la particella e da quel momento inizia a far parte del cristallo. Altrimenti la particella si muove.
+ *    in caso affermativo blocca la particella e la aggiunge ad una lista. Altrimenti la particella si muove.
  *  - nel caso in cui la particella non sia rimasta bloccata, viene chiamata la funzione move che si occupa di muoverla.
+ *  - finito il ciclo sulle particelle, viene letta tutta la lista di particelle stucke, e viene aggiornata la matrice
  *
  * L'algoritmo termina al raggiungimento di un valore t.
- * La funzione riceve in input il numero di particelle, la lista di particelle, le dimensioni della matrice e la matrice.
- * La funzione ritorna 0 se l'esecuzione è andata a buon fine, altrimenti ritorna 1.
- *
+ * @param num_particles: il numero di particelle
+ * @param particle_list: la lista di particelle
+ * @param n: alteza matrice
+ * @param m: lunghezza matrice
+ * @param horizon: numero di tick
  */
 void start_DLA(int num_particles,
                particle *particles_list,
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
     }
 
     // Metto il seed nella matrice
-    matrix[seed[0]][seed[1]] = 1; 
+    matrix[seed[1]][seed[0]] = 1; 
 
     // Alloco la lista di tutte le particelle
     particle *particles_list = (particle *)malloc(sizeof(particle) * num_particles);
