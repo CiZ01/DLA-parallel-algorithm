@@ -12,7 +12,7 @@
 int num_threads;
 int n, m, num_particles, horizon;
 int seed[2];
-cell **matrix;
+int **matrix;
 unsigned int rand_seed;
 pthread_barrier_t barrier;
 char filename[32];

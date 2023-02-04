@@ -12,7 +12,9 @@ int n, m, num_particles, horizon;
 int seed[2];               // seed
 int **matrix;              // matrice di interi
 pthread_barrier_t barrier; // barriera per sincronizzare i thread
-
+char filename[32];
+int colors[2];
+int white;
 
 gdImagePtr p_img; // puntatore all'immagine
 
@@ -89,11 +91,9 @@ void *start_DLA_parallel(void *rank)
 
     stuckedParticles stucked_particles; // lista di particelle bloccate
 
-
-    float perc = ((float)num_particles / (float)(n*m)) * 100;
+    float perc = ((float)num_particles / (float)(n * m)) * 100;
     int cap = (int)(((float)perc * (float)num_particles) / 100);
-    if (cap == 0)
-        cap = num_particles/3;
+
     // inizializzo la lista delle particelle bloccate
     if (init_StuckedParticles(&stucked_particles, (int)cap) != 0)
     {
@@ -121,9 +121,11 @@ void *start_DLA_parallel(void *rank)
                 int isStuck = check_position(n, m, matrix, p, &stucked_particles);
                 if (isStuck == 0)
                 {
-                    if (t < horizon)
-                        move_parallel(p, n, m);
-                    else if (p->isOut == 0)
+                    if (p->isOut == 0)
+                        matrix[p->current_position->y][p->current_position->x] -= 2;
+
+                    move_parallel(p, n, m);
+                    if (p->isOut == 0)
                         matrix[p->current_position->y][p->current_position->x] += 2;
                 }
             }
@@ -134,6 +136,13 @@ void *start_DLA_parallel(void *rank)
         {
             particle p = sp_pop(&stucked_particles);
             matrix[p.current_position->y][p.current_position->x] = 1;
+        }
+        if ((int)my_rank == 0)
+        {
+            // write_matrix_cell(n, m, matrix);
+            sprintf(filename, "imgs/frames/frame_%05d.jpg", t);
+            createImage(p_img, m, n, matrix, colors, filename);
+            gdImageFilledRectangle(p_img, 0, 0, m, n, white);
         }
         pthread_barrier_wait(&barrier);
     }
@@ -165,7 +174,6 @@ int main(int argc, char *argv[])
 
     // recupero i parametri da riga di comando
     get_args_parallel(argc, argv, &num_particles, &n, &m, seed, &num_threads, &horizon);
-
 
     // Alloca un array di puntatori a interi per ogni riga
     matrix = (int **)malloc(n * sizeof(int *));
@@ -204,25 +212,23 @@ int main(int argc, char *argv[])
 
     printf("Elapsed time: %f seconds \n", elapsed);
 
-    //-----TIME------//
-
-    FILE *elapsed_time = fopen("./times/time_dla_pthread.txt", "a");
-    fprintf(elapsed_time, "%f\n", elapsed);
-    fclose(elapsed_time);
-
-    //---------------//
+    printf("Rendering video...\n");
+    int status = system("ffmpeg -framerate 80 -pattern_type glob -i './imgs/frames/*.jpg' -c:v libx264 -crf 28 -pix_fmt yuv420p animation.mp4 -y > /dev/null");
+    if (status == -1)
+        perror("Error creating gif");
 
     // -----IMAGE----- //
     char filename[100];
     sprintf(filename, "DLA_%d_%d_%d_%d_%d.png", n, m, num_particles, num_threads, horizon);
     p_img = gdImageCreate(m, n);
 
-    int white = gdImageColorAllocate(p_img, 255, 255, 255);
+    white = gdImageColorAllocate(p_img, 255, 255, 255);
     gdImageFill(p_img, 0, 0, white);
 
     int black = gdImageColorAllocate(p_img, 0, 0, 0);
     int red = gdImageColorAllocate(p_img, 255, 0, 0);
-    int colors[] = {black, red};
+    colors[0] = black;
+    colors[1] = red;
 
     printf("Creating image... \n");
     createImage(p_img, m, n, matrix, colors, filename);

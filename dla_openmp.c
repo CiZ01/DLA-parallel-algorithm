@@ -80,6 +80,8 @@ void start_DLA(int num_particles,
     // Inizializzo la lista delle particelle bloccate
     float perc = ((float)num_particles / (float)(n*m)) * 100;
     int cap = (int)(((float)perc * (float)num_particles) / 100);
+    if (cap == 0)
+        cap = num_particles/3;
     if (init_StuckedParticles(&sp, cap) != 0)
     {
         perror("Errore nell'inizializazione della stuckedParticles list. \n");

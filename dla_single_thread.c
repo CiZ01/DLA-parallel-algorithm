@@ -32,8 +32,8 @@ void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *s
     *num_particles = (int)atoi(argv[2]);
 
     // genero random il seed - DEFAULT
-    seed[0] = (int)rand_r(&gen_rand) % *n;
-    seed[1] = (int)rand_r(&gen_rand) % *m;
+    seed[0] = (int)rand_r(&gen_rand) % *m;
+    seed[1] = (int)rand_r(&gen_rand) % *n;
 
     // setto il numero di iterazioni massime - DEFAULT
     *horizon = HORIZON;
@@ -224,6 +224,8 @@ int main(int argc, char *argv[])
     matrix[seed[1]][seed[0]] = 1; // scrivo il seed sulla matrice
     float perc = ((float)num_particles / (float)(n * m)) * 100;
     int cap = (int)(((float)perc * (float)num_particles) / 100);
+    if (cap == 0)
+        cap = num_particles/3;
 
     if (init_StuckedParticles(&sp, (int)cap) != 0)
     {
