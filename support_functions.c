@@ -53,6 +53,8 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
 void get_args(int argc, char *argv[], int *num_particles, int *n, int *m, int *seed, int *horizon);
 void write_matrix(int n, int m, int **matrix);
 void print_matrix(int n, int m, int **matrix);
+int check_position_openMP(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
+int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 void move(particle *p, int n, int m);
 void move_parallel(particle *p, int n, int m);
 double get_time(void);
@@ -78,7 +80,6 @@ typedef struct
     int size;
 } list;
 
-int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp);
 void init_list(list *l);
 void append(list *l, particle p);
 particle pop(list *l);
@@ -166,7 +167,6 @@ int sp_append(stuckedParticles *sp, particle p)
     return 0;
 }
 
-
 /*
  * Aggiunge una particella alla lista, se la lista è piena viene riallocata la memoria.
  * @param stuckedParticles struttura a cui aggiungere la particella
@@ -177,16 +177,18 @@ int sp_append_openMP(stuckedParticles *sp, particle p)
 {
     if (sp->size == sp->capacity - 1)
     {
-        printf("ERRORE \n");
+        perror(" Errore nell'append \n");
         exit(10);
     }
     #pragma omp critical
     {
-        sp->data[sp->size + 1] = p;
-        sp->size++;
+    sp->data[sp->size + 1] = p;
+    sp->size++;
     }
     return 0;
 }
+
+
 /*
  * Rimuove l'ultima particella inserita nella struttura e la restituisce.
  * @param stuckedParticles struttura da cui rimuovere la particella
@@ -291,6 +293,42 @@ void get_args_parallel(int argc, char *argv[], int *num_particles, int *n, int *
  * @return 0 se la particella non è rimasta bloccata, -1 se la particella è rimasta bloccata
  */
 int check_position(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
+{
+    if (p->isOut == 1)
+    {
+        return 0;
+    }
+
+    int directions[] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, 1, -1, -1, 1, -1, -1};
+
+    for (int i = 0; i < 8; i += 2)
+    {
+        int near_y = p->current_position->y + directions[i];
+        int near_x = p->current_position->x + directions[i + 1];
+        if (near_x >= 0 && near_x < m && near_y >= 0 && near_y < n)
+        {
+            if (matrix[near_y][near_x] == 1)
+            {
+                sp_append(sp, *p);
+                p->stuck = 1;
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+/*
+ * Controlla tutti i possibili movimenti che potrebbe fare la particella in una superficie 2D.
+ * @param n: numero di righe della matrice
+ * @param m: numero di colonne della matrice
+ * @param matrix: matrice di interi
+ * @param p: particella
+ * @param sp: lista di particelle bloccate
+ * @return 0 se la particella non è rimasta bloccata, -1 se la particella è rimasta bloccata
+ */
+int check_position_openMP(int n, int m, int **matrix, particle *p, stuckedParticles *sp)
 {
     if (p->isOut == 1)
     {

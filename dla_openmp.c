@@ -100,7 +100,7 @@ void start_DLA(int num_particles,
             if (p->stuck == 0)
             {
                 // Controllo la posizione
-                int isStuck = check_position(n, m, matrix, p, &sp);
+                int isStuck = check_position_openMP(n, m, matrix, p, &sp);
                 if (isStuck == 0)
                 {
                     // if and else per fare un ulitmo check se qualche particella si è stuckata
